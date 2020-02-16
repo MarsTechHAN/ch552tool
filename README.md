@@ -1,4 +1,4 @@
-ch552tool
+ch55x-tool
 ------------
 
 An open sourced python command line flash tool for flashing WinChipHead CH55x series 8051 USB micro controllers, including CH551, CH552, CH553, CH554, and CH559  with bootloader version 2.30 or 2.31.
@@ -17,8 +17,8 @@ Tool Setup
 python3 -mpip install pyusb
 ```
 
-* Mac Os
- > For Mac Os, you need to install both libusb and pyusb.
+* Mac OS
+ > For Mac OS, you need to install both libusb and pyusb.
 
 ```bash
 # If you dont have brew installed.
@@ -50,4 +50,4 @@ python3 -mpip install pyusb
  > I never met with those problems on a working CH552. Checking the power, the previliage, and praying may help.
  
  * What if it return __Bootloader version not supported__?
- > The program dont support BTVER lower than 2.30(welcom PR, but since they are too old, I dont have plan to support them). Or maybe they have a newer verison, for this situlation, it is welcome for you to open an issue.
+ > The program dont support BTVER lower than 2.30(welcome PR, but since they are too old, I dont have plan to support them). Or maybe they have a newer verison, for this situlation, it is welcome for you to open an issue.
