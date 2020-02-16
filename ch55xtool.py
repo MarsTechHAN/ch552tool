@@ -28,11 +28,11 @@ VERIFY_CMD_V2 = [0xa6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 READ_CFG_CMD_V2 = [0xa7, 0x02, 0x00, 0x1f, 0x00]
 
 CH55X_IC_REF = {}
-CH55X_IC_REF[0x51] = {'device_name': 'CH551', 'device_flash_size': 10240, 'device_dataflash_size': 128}
-CH55X_IC_REF[0x52] = {'device_name': 'CH552', 'device_flash_size': 16384, 'device_dataflash_size': 128}
-CH55X_IC_REF[0x53] = {'device_name': 'CH553', 'device_flash_size': 10240, 'device_dataflash_size': 128}
-CH55X_IC_REF[0x54] = {'device_name': 'CH554', 'device_flash_size': 14336, 'device_dataflash_size': 128}
-CH55X_IC_REF[0x59] = {'device_name': 'CH559', 'device_flash_size': 61440, 'device_dataflash_size': 128}
+CH55X_IC_REF[0x51] = {'device_name': 'CH551', 'device_flash_size': 10240, 'device_dataflash_size': 128, 'chip_id': 0x51}
+CH55X_IC_REF[0x52] = {'device_name': 'CH552', 'device_flash_size': 16384, 'device_dataflash_size': 128, 'chip_id': 0x52}
+CH55X_IC_REF[0x53] = {'device_name': 'CH553', 'device_flash_size': 10240, 'device_dataflash_size': 128, 'chip_id': 0x53}
+CH55X_IC_REF[0x54] = {'device_name': 'CH554', 'device_flash_size': 14336, 'device_dataflash_size': 128, 'chip_id': 0x54}
+CH55X_IC_REF[0x59] = {'device_name': 'CH559', 'device_flash_size': 61440, 'device_dataflash_size': 128, 'chip_id': 0x59}
 #=============================================
 
 def __get_dfu_device(idVendor=DFU_ID_VENDOR, idProduct=DFU_ID_PRODUCT):
@@ -103,13 +103,13 @@ def __erase_chip_ch55x_v2(dev):
     else:
         return None
 
-def __write_flash_ch55x_v20(dev, chk_sum, payload):
+def __write_flash_ch55x_v20(dev, chk_sum, chip_id, payload):
     payload = payload + [0] * ((math.ceil(len(payload) / 56) * 56) - len(payload)) # Payload needs to be padded, 56 is a good number
     file_length = len(payload)
 
     for index in range(file_length):
         if index % 8 == 7:
-            payload[index] = (payload[index] ^ ((chk_sum + 0x52) % 256)) % 256
+            payload[index] = (payload[index] ^ ((chk_sum + chip_id) % 256)) % 256
 
     left_len = file_length
     curr_addr = 0
@@ -139,13 +139,13 @@ def __write_flash_ch55x_v20(dev, chk_sum, payload):
         
     return file_length
 
-def __write_flash_ch55x_v23(dev, chk_sum, payload):
+def __write_flash_ch55x_v23(dev, chk_sum, chip_id, payload):
     payload = payload + [0] * ((math.ceil(len(payload) / 56) * 56) - len(payload)) # Payload needs to be padded, 56 is a good number
     file_length = len(payload)
 
     for index in range(file_length):
         if index % 8 == 7:
-            payload[index] = (payload[index] ^ ((chk_sum + 0x52) % 256)) % 256
+            payload[index] = (payload[index] ^ ((chk_sum + chip_id) % 256)) % 256
         else:
             payload[index] = (payload[index] ^ chk_sum) % 256
 
@@ -177,13 +177,13 @@ def __write_flash_ch55x_v23(dev, chk_sum, payload):
         
     return file_length
 
-def __verify_flash_ch55x_v20(dev, chk_sum, payload):
+def __verify_flash_ch55x_v20(dev, chk_sum, chip_id, payload):
     payload = payload + [0] * ((math.ceil(len(payload) / 56) * 56) - len(payload)) # Payload needs to be padded, 56 is a good number
     file_length = len(payload)
 
     for index in range(file_length):
         if index % 8 == 7:
-            payload[index] = (payload[index] ^ ((chk_sum + 0x52) % 256)) % 256
+            payload[index] = (payload[index] ^ ((chk_sum + chip_id) % 256)) % 256
 
     left_len = file_length
     curr_addr = 0
@@ -213,13 +213,13 @@ def __verify_flash_ch55x_v20(dev, chk_sum, payload):
         
     return file_length
 
-def __verify_flash_ch55x_v23(dev, chk_sum, payload):
+def __verify_flash_ch55x_v23(dev, chk_sum, chip_id, payload):
     payload = payload + [0] * ((math.ceil(len(payload) / 56) * 56) - len(payload)) # Payload needs to be padded, 56 is a good number
     file_length = len(payload)
 
     for index in range(file_length):
         if index % 8 == 7:
-            payload[index] = (payload[index] ^ ((chk_sum + 0x52) % 256)) % 256
+            payload[index] = (payload[index] ^ ((chk_sum + chip_id) % 256)) % 256
         else:
             payload[index] = (payload[index] ^ chk_sum) % 256
 
@@ -277,6 +277,7 @@ def __main():
     if ret is None:
         print('Unable to detect CH55x.')
     print('Found %s.' % ret['device_name'])
+    chip_id = ret['chip_id']
     
     ret = __read_cfg_ch55x_v2(dev)
     chk_sum = ret[1]
@@ -294,11 +295,11 @@ def __main():
             if ret is None:
                 sys.exit('Failed to erase CH55x.')
             
-            ret = __write_flash_ch55x_v20(dev, chk_sum, payload)
+            ret = __write_flash_ch55x_v20(dev, chk_sum, chip_id, payload)
             if ret is None:
                 sys.exit('Failed to flash firmware of CH55x.')
 
-            ret = __verify_flash_ch55x_v20(dev, chk_sum, payload)
+            ret = __verify_flash_ch55x_v20(dev, chk_sum, chip_id, payload)
             if ret is None:
                 sys.exit('Failed to verify firmware of CH55x.')
         else: 
@@ -311,11 +312,11 @@ def __main():
                 if ret is None:
                     sys.exit('Failed to erase CH55x.')
                 
-                ret = __write_flash_ch55x_v23(dev, chk_sum, payload)
+                ret = __write_flash_ch55x_v23(dev, chk_sum, chip_id, payload)
                 if ret is None:
                     sys.exit('Failed to flash firmware of CH55x.')
 
-                ret = __verify_flash_ch55x_v23(dev, chk_sum, payload)
+                ret = __verify_flash_ch55x_v23(dev, chk_sum, chip_id, payload)
                 if ret is None:
                     sys.exit('Failed to verify firmware of CH55x.')
             else:
