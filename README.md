@@ -46,7 +46,10 @@ python3 -mpip install pyusb
  * Why it said __NO_DEV_FOUND__ ?
  > Pyusb unable to fine the device with given PID&VID. Maybe you dont power on your device, or it is not in DFU mode.
  
- * I got a __USB_ERROR_CANNOT_DETACH_KERNEL_DRIVER__, __USB_ERROR_CANNOT_SET_CONFIG__, or __USB_ERROR_CANNOT_CLAIM_INTERFACE__ error.
+ * I got a __USB_ERROR_CANNOT_SET_CONFIG__ error.
+ > This high probability is a permission issue. Add ``SUBSYSTEM=="usb", ATTRS{idVendor}=="4348", MODE="0666"`` to ``/etc/udev/rules.d/50-ch55x.rules``, and re-plug your device. Otherwise you need sudo.
+ 
+ * I got a __USB_ERROR_CANNOT_DETACH_KERNEL_DRIVER__, or __USB_ERROR_CANNOT_CLAIM_INTERFACE__ error.
  > I never met with those problems on a working CH552. Checking the power, the previliage, and praying may help.
  
  * What if it return __Bootloader version not supported__?
