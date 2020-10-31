@@ -286,7 +286,7 @@ def __main():
 
     if args.file != '':
         payload = list(open(args.file, 'rb').read())
-        if ret[0] == 'V2.30':
+        if ret[0] in ['V2.30']:
             ret = __write_key_ch55x_v20(dev, chk_sum)
             if ret is None:
                 sys.exit('Failed to write key to CH55x.')
@@ -303,7 +303,7 @@ def __main():
             if ret is None:
                 sys.exit('Failed to verify firmware of CH55x.')
         else: 
-            if ret[0] == 'V2.31':
+            if ret[0] in ['V2.31', 'V2.40']:
                 ret = __write_key_ch55x_v23(dev)
                 if ret is None:
                     sys.exit('Failed to write key to CH55x.')
