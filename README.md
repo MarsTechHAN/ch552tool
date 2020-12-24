@@ -1,6 +1,6 @@
-ch55x-tool
-------------
+# ch55xtool
 
+## Now available on pypi!
 An open sourced python command line flash tool for flashing WinChipHead CH55x series 8051 USB micro controllers, including CH551, CH552, CH553, CH554, and CH559  with bootloader version(BTV) 2.30, 2.31, v2.40. (You can check the verision by using the official CH55x Tool.)
 
 Usage
@@ -9,12 +9,16 @@ Usage
 * __-r__ Issue reset and run after the flashing.
 * __-d__ Debug mode, if enabled, will print out all USB communications.
 
+```bash
+python3 -m ch55xtool -f THE_BINARY_FILE.bin
+```
+
 Tool Setup
 ------------
 * Linux Distros
   > Most Linux distros come with libusb, so you only need to install the pyusb packge.
 ```bash
-python3 -mpip install pyusb
+python3 -mpip install ch55xtool
 ```
 
 * Mac OS
@@ -24,7 +28,7 @@ python3 -mpip install pyusb
 # If you dont have brew installed.
 # /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 brew install libusb
-python3 -mpip install pyusb
+python3 -mpip install ch55xtool
 ```
 
 * As for Windows, oh no... :(
@@ -34,7 +38,7 @@ python3 -mpip install pyusb
   > 4. Replace the driver with libusb-win32.
   > 5. Install the pyusb package.
  ```
- python -mpip install pyusb #Make sure you have the python3 in the PATH, not python2
+ python3 -mpip install ch55xtool #Make sure you have the python3 in the PATH, not python2
  ```
   > 6. If you want to use the WCH Toolchain, open the device manager, find the device marked with __libusb-win32 deives__, right clicked on it, uninstall the driver and delete the driver. You can also check the FAQ of Zadig [HERE](https://github.com/pbatard/libwdi/wiki/Zadig).
   
