@@ -359,12 +359,17 @@ def main():
 
     ret = __get_dfu_device()
     if ret[0] is None:
-        sys.exit(ret[1])
+        print('Failed to get device, please check your libusb installation.')
+        sys.exit(-1)
+        
     dev = ret[0]
 
     ret = __detect_ch55x_v2(dev)
     if ret is None:
         print('Unable to detect CH55x.')
+        print('Welcome to report this issue with a screen shot from the official CH55x tool.')
+        sys.exit(-1)
+
     print('Found %s.' % ret['device_name'])
     chip_id = ret['chip_id']
 
