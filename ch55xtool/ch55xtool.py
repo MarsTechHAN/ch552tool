@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, os
+import sys
+import os
 import time
 import array
 import math
@@ -9,8 +10,9 @@ import argparse
 
 import usb.core
 import usb.util
-        
-#======= Some C-like static constants =======
+
+
+# ======= Some C-like static constants =======
 DFU_ID_VENDOR = 0x4348
 DFU_ID_PRODUCT = 0x55e0
 
@@ -19,8 +21,28 @@ EP_IN_ADDR = 0x82
 
 USB_MAX_TIMEOUT = 2000
 
-DETECT_CHIP_CMD_V2 = [0xa1, 0x12, 0x00, 0x52, 0x11, 0x4d, 0x43, 0x55, 0x20, 0x49, 0x53,
-				    0x50, 0x20, 0x26, 0x20, 0x57, 0x43, 0x48, 0x2e, 0x43, 0x4e]
+DETECT_CHIP_CMD_V2 = [
+    0xa1,
+    0x12,
+    0x00,
+    0x52,
+    0x11,
+    0x4d,
+    0x43,
+    0x55,
+    0x20,
+    0x49,
+    0x53,
+    0x50,
+    0x20,
+    0x26,
+    0x20,
+    0x57,
+    0x43,
+    0x48,
+    0x2e,
+    0x43,
+    0x4e]
 END_FLASH_CMD_V2 = [0xa2, 0x01, 0x00, 0x00]
 RESET_RUN_CMD_V2 = [0xa2, 0x01, 0x00, 0x01]
 SEND_KEY_CMD_V20 = [0xa3, 0x30, 0x00]
@@ -31,12 +53,33 @@ VERIFY_CMD_V2 = [0xa6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 READ_CFG_CMD_V2 = [0xa7, 0x02, 0x00, 0x1f, 0x00]
 
 CH55X_IC_REF = {}
-CH55X_IC_REF[0x51] = {'device_name': 'CH551', 'device_flash_size': 10240, 'device_dataflash_size': 128, 'chip_id': 0x51}
-CH55X_IC_REF[0x52] = {'device_name': 'CH552', 'device_flash_size': 16384, 'device_dataflash_size': 128, 'chip_id': 0x52}
-CH55X_IC_REF[0x53] = {'device_name': 'CH553', 'device_flash_size': 10240, 'device_dataflash_size': 128, 'chip_id': 0x53}
-CH55X_IC_REF[0x54] = {'device_name': 'CH554', 'device_flash_size': 14336, 'device_dataflash_size': 128, 'chip_id': 0x54}
-CH55X_IC_REF[0x59] = {'device_name': 'CH559', 'device_flash_size': 61440, 'device_dataflash_size': 128, 'chip_id': 0x59}
-#=============================================
+CH55X_IC_REF[0x51] = {
+    'device_name': 'CH551',
+    'device_flash_size': 10240,
+    'device_dataflash_size': 128,
+    'chip_id': 0x51}
+CH55X_IC_REF[0x52] = {
+    'device_name': 'CH552',
+    'device_flash_size': 16384,
+    'device_dataflash_size': 128,
+    'chip_id': 0x52}
+CH55X_IC_REF[0x53] = {
+    'device_name': 'CH553',
+    'device_flash_size': 10240,
+    'device_dataflash_size': 128,
+    'chip_id': 0x53}
+CH55X_IC_REF[0x54] = {
+    'device_name': 'CH554',
+    'device_flash_size': 14336,
+    'device_dataflash_size': 128,
+    'chip_id': 0x54}
+CH55X_IC_REF[0x59] = {
+    'device_name': 'CH559',
+    'device_flash_size': 61440,
+    'device_dataflash_size': 128,
+    'chip_id': 0x59}
+# =============================================
+
 
 def __get_dfu_device(idVendor=DFU_ID_VENDOR, idProduct=DFU_ID_PRODUCT):
     dev = usb.core.find(idVendor=idVendor, idProduct=idProduct)
@@ -48,8 +91,8 @@ def __get_dfu_device(idVendor=DFU_ID_VENDOR, idProduct=DFU_ID_PRODUCT):
                 dev.detach_kernel_driver(0)
             except usb.core.USBError:
                 return (None, 'USB_ERROR_CANNOT_DETACH_KERNEL_DRIVER')
-    except:
-        pass #Windows dont need detach
+    except BaseException:
+        pass  # Windows dont need detach
 
     try:
         dev.set_configuration()
@@ -60,8 +103,9 @@ def __get_dfu_device(idVendor=DFU_ID_VENDOR, idProduct=DFU_ID_PRODUCT):
         usb.util.claim_interface(dev, 0)
     except usb.core.USBError:
         return (None, 'USB_ERROR_CANNOT_CLAIM_INTERFACE')
-    
+
     return (dev, '')
+
 
 def __detect_ch55x_v2(dev):
     dev.write(EP_OUT_ADDR, DETECT_CHIP_CMD_V2)
@@ -70,6 +114,7 @@ def __detect_ch55x_v2(dev):
         return CH55X_IC_REF[ret[4]]
     except KeyError:
         return None
+
 
 def __read_cfg_ch55x_v2(dev):
     dev.write(EP_OUT_ADDR, READ_CFG_CMD_V2)
@@ -80,39 +125,47 @@ def __read_cfg_ch55x_v2(dev):
 
     return (ver_str, chk_sum)
 
+
 def __write_key_ch55x_v20(dev, chk_sum):
     SEND_KEY_CMD_V20 = SEND_KEY_CMD_V20 + [chk_sum] * 0x30
 
     dev.write(EP_OUT_ADDR, SEND_KEY_CMD_V20)
     ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
-    if ret[3] == 0: 
+    if ret[3] == 0:
         return True
     else:
         return None
+
 
 def __write_key_ch55x_v23(dev):
     dev.write(EP_OUT_ADDR, SEND_KEY_CMD_V23)
     ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
-    if ret[3] == 0: 
+    if ret[3] == 0:
         return True
     else:
         return None
+
 
 def __erase_chip_ch55x_v2(dev):
     dev.write(EP_OUT_ADDR, ERASE_CHIP_CMD_V2)
     ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
-    if ret[3] == 0: 
+    if ret[3] == 0:
         return True
     else:
         return None
 
+
 def __write_flash_ch55x_v20(dev, chk_sum, chip_id, payload):
-    payload = payload + [0] * ((math.ceil(len(payload) / 56) * 56) - len(payload)) # Payload needs to be padded, 56 is a good number
+    # Payload needs to be padded, 56 is a good number
+    payload = payload + [0] * \
+        ((math.ceil(len(payload) / 56) * 56) - len(payload))
     file_length = len(payload)
 
     for index in range(file_length):
         if index % 8 == 7:
-            payload[index] = (payload[index] ^ ((chk_sum + chip_id) % 256)) % 256
+            payload[index] = (
+                payload[index] ^ (
+                    (chk_sum + chip_id) % 256)) % 256
 
     left_len = file_length
     curr_addr = 0
@@ -129,26 +182,32 @@ def __write_flash_ch55x_v20(dev, chk_sum, chip_id, payload):
         __WRITE_CMD_V2[3] = curr_addr % 256
         __WRITE_CMD_V2[4] = (curr_addr >> 8) % 256
         __WRITE_CMD_V2[7] = left_len % 256
-        __WRITE_CMD_V2 = __WRITE_CMD_V2 + payload[curr_addr:curr_addr+pkt_length]
-        
+        __WRITE_CMD_V2 = __WRITE_CMD_V2 + \
+            payload[curr_addr:curr_addr + pkt_length]
+
         dev.write(EP_OUT_ADDR, __WRITE_CMD_V2)
         ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
 
-        curr_addr = curr_addr  + pkt_length
+        curr_addr = curr_addr + pkt_length
         left_len = left_len - pkt_length
 
         if ret[4] != 0x00:
             return None
-        
+
     return file_length
+
 
 def __write_flash_ch55x_v23(dev, chk_sum, chip_id, payload):
-    payload = payload + [0] * ((math.ceil(len(payload) / 56) * 56) - len(payload)) # Payload needs to be padded, 56 is a good number
+    # Payload needs to be padded, 56 is a good number
+    payload = payload + [0] * \
+        ((math.ceil(len(payload) / 56) * 56) - len(payload))
     file_length = len(payload)
 
     for index in range(file_length):
         if index % 8 == 7:
-            payload[index] = (payload[index] ^ ((chk_sum + chip_id) % 256)) % 256
+            payload[index] = (
+                payload[index] ^ (
+                    (chk_sum + chip_id) % 256)) % 256
         else:
             payload[index] = (payload[index] ^ chk_sum) % 256
 
@@ -167,26 +226,32 @@ def __write_flash_ch55x_v23(dev, chk_sum, chip_id, payload):
         __WRITE_CMD_V2[3] = curr_addr % 256
         __WRITE_CMD_V2[4] = (curr_addr >> 8) % 256
         __WRITE_CMD_V2[7] = left_len % 256
-        __WRITE_CMD_V2 = __WRITE_CMD_V2 + payload[curr_addr:curr_addr+pkt_length]
-        
+        __WRITE_CMD_V2 = __WRITE_CMD_V2 + \
+            payload[curr_addr:curr_addr + pkt_length]
+
         dev.write(EP_OUT_ADDR, __WRITE_CMD_V2)
         ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
 
-        curr_addr = curr_addr  + pkt_length
+        curr_addr = curr_addr + pkt_length
         left_len = left_len - pkt_length
 
         if ret[4] != 0x00:
             return None
-        
+
     return file_length
 
+
 def __verify_flash_ch55x_v20(dev, chk_sum, chip_id, payload):
-    payload = payload + [0] * ((math.ceil(len(payload) / 56) * 56) - len(payload)) # Payload needs to be padded, 56 is a good number
+    # Payload needs to be padded, 56 is a good number
+    payload = payload + [0] * \
+        ((math.ceil(len(payload) / 56) * 56) - len(payload))
     file_length = len(payload)
 
     for index in range(file_length):
         if index % 8 == 7:
-            payload[index] = (payload[index] ^ ((chk_sum + chip_id) % 256)) % 256
+            payload[index] = (
+                payload[index] ^ (
+                    (chk_sum + chip_id) % 256)) % 256
 
     left_len = file_length
     curr_addr = 0
@@ -203,26 +268,32 @@ def __verify_flash_ch55x_v20(dev, chk_sum, chip_id, payload):
         __VERIFY_CMD_V2[3] = curr_addr % 256
         __VERIFY_CMD_V2[4] = (curr_addr >> 8) % 256
         __VERIFY_CMD_V2[7] = left_len % 256
-        __VERIFY_CMD_V2 = __VERIFY_CMD_V2 + payload[curr_addr:curr_addr+pkt_length]
-        
+        __VERIFY_CMD_V2 = __VERIFY_CMD_V2 + \
+            payload[curr_addr:curr_addr + pkt_length]
+
         dev.write(EP_OUT_ADDR, __VERIFY_CMD_V2)
         ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
 
-        curr_addr = curr_addr  + pkt_length
+        curr_addr = curr_addr + pkt_length
         left_len = left_len - pkt_length
 
         if ret[4] != 0x00:
             return None
-        
+
     return file_length
 
+
 def __verify_flash_ch55x_v23(dev, chk_sum, chip_id, payload):
-    payload = payload + [0] * ((math.ceil(len(payload) / 56) * 56) - len(payload)) # Payload needs to be padded, 56 is a good number
+    # Payload needs to be padded, 56 is a good number
+    payload = payload + [0] * \
+        ((math.ceil(len(payload) / 56) * 56) - len(payload))
     file_length = len(payload)
 
     for index in range(file_length):
         if index % 8 == 7:
-            payload[index] = (payload[index] ^ ((chk_sum + chip_id) % 256)) % 256
+            payload[index] = (
+                payload[index] ^ (
+                    (chk_sum + chip_id) % 256)) % 256
         else:
             payload[index] = (payload[index] ^ chk_sum) % 256
 
@@ -241,18 +312,20 @@ def __verify_flash_ch55x_v23(dev, chk_sum, chip_id, payload):
         __VERIFY_CMD_V2[3] = curr_addr % 256
         __VERIFY_CMD_V2[4] = (curr_addr >> 8) % 256
         __VERIFY_CMD_V2[7] = left_len % 256
-        __VERIFY_CMD_V2 = __VERIFY_CMD_V2 + payload[curr_addr:curr_addr+pkt_length]
-        
+        __VERIFY_CMD_V2 = __VERIFY_CMD_V2 + \
+            payload[curr_addr:curr_addr + pkt_length]
+
         dev.write(EP_OUT_ADDR, __VERIFY_CMD_V2)
         ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
 
-        curr_addr = curr_addr  + pkt_length
+        curr_addr = curr_addr + pkt_length
         left_len = left_len - pkt_length
 
         if ret[4] != 0x00:
             return None
-        
+
     return file_length
+
 
 def __end_flash_ch55x_v2(dev):
     dev.write(EP_OUT_ADDR, END_FLASH_CMD_V2)
@@ -262,13 +335,26 @@ def __end_flash_ch55x_v2(dev):
     else:
         return True
 
+
 def __restart_run_ch55x_v2(dev):
     dev.write(EP_OUT_ADDR, RESET_RUN_CMD_V2)
 
-def __main():
-    parser = argparse.ArgumentParser(description="USBISP Tool For WinChipHead CH55x.")
-    parser.add_argument('-f', '--file', type=str, default='', help="The target file to be flashed.")
-    parser.add_argument('-r', '--reset_after_flash', action='store_true', default=False, help="Reset after finsh flash.")
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="USBISP Tool For WinChipHead CH55x.")
+    parser.add_argument(
+        '-f',
+        '--file',
+        type=str,
+        default='',
+        help="The target file to be flashed.")
+    parser.add_argument(
+        '-r',
+        '--reset_after_flash',
+        action='store_true',
+        default=False,
+        help="Reset after finsh flash.")
     args = parser.parse_args()
 
     ret = __get_dfu_device()
@@ -281,7 +367,7 @@ def __main():
         print('Unable to detect CH55x.')
     print('Found %s.' % ret['device_name'])
     chip_id = ret['chip_id']
-    
+
     ret = __read_cfg_ch55x_v2(dev)
     chk_sum = ret[1]
 
@@ -297,7 +383,7 @@ def __main():
             ret = __erase_chip_ch55x_v2(dev)
             if ret is None:
                 sys.exit('Failed to erase CH55x.')
-            
+
             ret = __write_flash_ch55x_v20(dev, chk_sum, chip_id, payload)
             if ret is None:
                 sys.exit('Failed to flash firmware of CH55x.')
@@ -305,7 +391,7 @@ def __main():
             ret = __verify_flash_ch55x_v20(dev, chk_sum, chip_id, payload)
             if ret is None:
                 sys.exit('Failed to verify firmware of CH55x.')
-        else: 
+        else:
             if ret[0] in ['V2.31', 'V2.40']:
                 ret = __write_key_ch55x_v23(dev)
                 if ret is None:
@@ -314,7 +400,7 @@ def __main():
                 ret = __erase_chip_ch55x_v2(dev)
                 if ret is None:
                     sys.exit('Failed to erase CH55x.')
-                
+
                 ret = __write_flash_ch55x_v23(dev, chk_sum, chip_id, payload)
                 if ret is None:
                     sys.exit('Failed to flash firmware of CH55x.')
@@ -324,18 +410,13 @@ def __main():
                     sys.exit('Failed to verify firmware of CH55x.')
             else:
                 sys.exit('Bootloader version not supported.')
-        
+
         ret = __end_flash_ch55x_v2(dev)
         if ret is None:
             sys.exit('Failed to end flash process.')
-        
+
         print('Flash done.')
 
         if args.reset_after_flash:
             __restart_run_ch55x_v2(dev)
             print('Restart and run.')
-
-
-
-if __name__ == '__main__':
-    __main()
