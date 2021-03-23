@@ -7,7 +7,6 @@ Usage
 ------------
 * __-f \<filename\>__ Erase the whole chip, and flash the bin file to the CH55x.
 * __-r__ Issue reset and run after the flashing.
-* __-d__ Debug mode, if enabled, will print out all USB communications.
 
 ```bash
 python3 -m ch55xtool -f THE_BINARY_FILE.bin
