@@ -19,4 +19,4 @@ setuptools.setup(
         ]
     },
     python_requires='>=3.5',
-    install_requires=['pyusb>=1.1.0'])
+    install_requires=['pyusb>=1.0.0'])
