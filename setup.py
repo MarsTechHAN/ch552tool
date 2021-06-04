@@ -13,5 +13,10 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    entry_points = {
+        'console_scripts': [
+            'ch55xtool = ch55xtool.ch55xtool:main'
+        ]
+    },
     python_requires='>=3.5',
-    install_requires=['pyusb>=1.1.0'])
+    install_requires=['pyusb>=1.0.0'])

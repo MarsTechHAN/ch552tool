@@ -348,7 +348,7 @@ def main():
         '--file',
         type=str,
         default='',
-        help="The target file to be flashed.")
+        help="The target file to be flashed. This must be a binary file (hex files are not supported).")
     parser.add_argument(
         '-r',
         '--reset_after_flash',
@@ -380,6 +380,8 @@ def main():
 
     if args.file != '':
         payload = list(open(args.file, 'rb').read())
+        if args.file.endswith('.hex') or args.file.endswith('.ihx') or payload[0]==58:
+            print("WARNING: This looks like a hex file. This tool only supports binary files.")
         if ret[0] in ['V2.30']:
             ret = __write_key_ch55x_v20(dev, chk_sum)
             if ret is None:
