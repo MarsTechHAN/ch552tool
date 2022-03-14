@@ -38,20 +38,20 @@ WRITE_CMD_V2 = [0xa5, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 VERIFY_CMD_V2 = [0xa6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 READ_CFG_CMD_V2 = [0xa7, 0x02, 0x00, 0x1f, 0x00]
 
-WCHChip = namedtuple("WCHChip", "name flash_size dataflash_size chip_id")
+WCHChip = namedtuple("WCHChip", "name flash_size dataflash_size chip_id erase_required_pages")
 chips = [
-        WCHChip("CH549", 60*1024, 1024, 0x49),
-        WCHChip("CH551", 10240, 128, 0x51),
-        WCHChip("CH552", 16384, 128, 0x52),
-        WCHChip("CH553", 10240, 128, 0x53),
-        WCHChip("CH554", 14336, 128, 0x54),
-        WCHChip("CH559", 61440, 128, 0x59),
-        WCHChip("CH32V307", 256*1024, 128, 0x70),
+        WCHChip("CH32V103", 64*1024, 0, 0x3f, True),
+        WCHChip("CH549", 60*1024, 1024, 0x49, False),
+        WCHChip("CH551", 10240, 128, 0x51, False),
+        WCHChip("CH552", 16384, 128, 0x52, False),
+        WCHChip("CH553", 10240, 128, 0x53, False),
+        WCHChip("CH554", 14336, 128, 0x54, False),
+        WCHChip("CH559", 61440, 128, 0x59, False),
+        WCHChip("CH579", 256*1024, 0, 0x79, True),
+        WCHChip("CH32V307", 256*1024, 128, 0x70, False),
     ]
 
 # =============================================
-
-
 def __get_dfu_device(idVendor=DFU_ID_VENDOR, idProduct=DFU_ID_PRODUCT):
     dev = usb.core.find(idVendor=idVendor, idProduct=idProduct)
     if dev is None:
@@ -216,13 +216,29 @@ def __write_flash_ch55x_v23(dev, chk_sum, chip_id, payload):
 
         dev.write(EP_OUT_ADDR, __WRITE_CMD_V2)
         ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
-
+        
         curr_addr = curr_addr + pkt_length
         left_len = left_len - pkt_length
 
         if ret[4] != 0x00:
             return None
 
+    if chip_id == 0x3f:
+        # My CH32V103 with BT V2.60 will fail to verify without this empty write
+        # My CH579 with BT V2.61 will fail to verify *with* this empty write
+        # I'm not sure if this is required due to MCU or bootloader version
+        # So for now am guarding it with the MCU chip id
+        __WRITE_CMD_V2 = WRITE_CMD_V2
+        __WRITE_CMD_V2[1] = 5
+        __WRITE_CMD_V2[3] = file_length % 256
+        __WRITE_CMD_V2[4] = (file_length >> 8) % 256
+        __WRITE_CMD_V2[5] = (file_length >> 16) % 256
+        __WRITE_CMD_V2[7] = 0
+        dev.write(EP_OUT_ADDR, __WRITE_CMD_V2)
+        ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
+        if ret[4] != 0x00:
+            return None
+    
     return file_length
 
 
