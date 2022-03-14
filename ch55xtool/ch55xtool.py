@@ -33,6 +33,7 @@ SEND_KEY_CMD_V20 = [0xa3, 0x30, 0x00]
 SEND_KEY_CMD_V23 = [0xa3, 0x38, 0x00] + [0x00] * (0x38)
 SEND_KEY_CMD_V26 = [0xa3, 0x1e, 0x00] + [0x00] * 30
 ERASE_CHIP_CMD_V2 = [0xa4, 0x01, 0x00, 0x08]
+ERASE_CHIP_CMD_V2_32BIT = [0xa4, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00]
 WRITE_CMD_V2 = [0xa5, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 VERIFY_CMD_V2 = [0xa6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 READ_CFG_CMD_V2 = [0xa7, 0x02, 0x00, 0x1f, 0x00]
@@ -119,13 +120,18 @@ def __write_key_ch55x_v23(dev, key_cmd):
         return None
 
 
-def __erase_chip_ch55x_v2(dev, binary_size):
-    # Ceil the binary size to the next multiple of 0x1000
-    erase_size = math.ceil(binary_size/0x1000) & 0xff
-    print('Erase size: 0x%x' % (erase_size * 0x1000))
-    cmd = ERASE_CHIP_CMD_V2.copy()
-    cmd[3] = erase_size
-    dev.write(EP_OUT_ADDR, cmd)
+def __erase_chip_ch55x_v2(dev, page_count):
+    if page_count < 256:
+        command = ERASE_CHIP_CMD_V2
+        command[3] = page_count
+    else:
+        command = ERASE_CHIP_CMD_V2_32BIT
+        command[3] = page_count % 256
+        command[4] = (page_count >> 8) % 256
+        command[5] = (page_count >> 16) % 256
+        command[6] = (page_count >> 24) % 256
+    
+    dev.write(EP_OUT_ADDR, command)
     ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
     if ret[3] == 0:
         return True
@@ -371,7 +377,8 @@ def main():
             if ret is None:
                 sys.exit('Failed to write key to CH55x.')
 
-            ret = __erase_chip_ch55x_v2(dev, len(payload))
+            pages = math.ceil(len(payload) / 0x1000) & 0xff
+            ret = __erase_chip_ch55x_v2(dev, pages)
             if ret is None:
                 sys.exit('Failed to erase CH55x.')
 
@@ -392,7 +399,9 @@ def main():
                 if ret is None:
                     sys.exit('Failed to write key to CH55x.')
 
-                ret = __erase_chip_ch55x_v2(dev, len(payload))
+                page_count = math.ceil(len(payload) / 1024)
+
+                ret = __erase_chip_ch55x_v2(dev, page_count)
                 if ret is None:
                     sys.exit('Failed to erase CH55x.')
 
