@@ -209,6 +209,7 @@ def __write_flash_ch55x_v23(dev, chk_sum, chip_id, payload):
         __WRITE_CMD_V2[1] = pkt_length + 5
         __WRITE_CMD_V2[3] = curr_addr % 256
         __WRITE_CMD_V2[4] = (curr_addr >> 8) % 256
+        __WRITE_CMD_V2[5] = (curr_addr >> 16) % 256
         __WRITE_CMD_V2[7] = left_len % 256
         __WRITE_CMD_V2 = __WRITE_CMD_V2 + \
             payload[curr_addr:curr_addr + pkt_length]
@@ -295,13 +296,14 @@ def __verify_flash_ch55x_v23(dev, chk_sum, chip_id, payload):
         __VERIFY_CMD_V2[1] = pkt_length + 5
         __VERIFY_CMD_V2[3] = curr_addr % 256
         __VERIFY_CMD_V2[4] = (curr_addr >> 8) % 256
+        __VERIFY_CMD_V2[5] = (curr_addr >> 16) % 256
         __VERIFY_CMD_V2[7] = left_len % 256
         __VERIFY_CMD_V2 = __VERIFY_CMD_V2 + \
             payload[curr_addr:curr_addr + pkt_length]
 
         dev.write(EP_OUT_ADDR, __VERIFY_CMD_V2)
         ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
-
+        
         curr_addr = curr_addr + pkt_length
         left_len = left_len - pkt_length
 
