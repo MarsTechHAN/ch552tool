@@ -47,7 +47,10 @@ chips = [
         WCHChip("CH553", 10240, 128, 0x53, False),
         WCHChip("CH554", 14336, 128, 0x54, False),
         WCHChip("CH559", 61440, 128, 0x59, False),
+        WCHChip("CH571", 192*1024, 0, 0x71, True),
+        WCHChip("CH573", 448*1024, 0, 0x73, True),
         WCHChip("CH579", 256*1024, 0, 0x79, True),
+        WCHChip("CH582", 448*1024, 0, 0x82, True),
         WCHChip("CH32V307", 256*1024, 128, 0x70, False),
     ]
 
@@ -408,7 +411,7 @@ def main():
             if ret is None:
                 sys.exit('Failed to verify firmware of CH55x.')
         else:
-            if btver in ['V2.31', 'V2.40', 'V2.60', 'V2.61', 'V2.70']:
+            if btver in ['V2.31', 'V2.40', 'V2.60', 'V2.61', 'V2.70', 'V2.80']:
                 if float(btver[1:]) >= 2.6:
                     ret = __write_key_ch55x_v23(dev, SEND_KEY_CMD_V26)
                 else:
