@@ -31,6 +31,7 @@ END_FLASH_CMD_V2 = [0xa2, 0x01, 0x00, 0x00]
 RESET_RUN_CMD_V2 = [0xa2, 0x01, 0x00, 0x01]
 SEND_KEY_CMD_V20 = [0xa3, 0x30, 0x00]
 SEND_KEY_CMD_V23 = [0xa3, 0x38, 0x00] + [0x00] * (0x38)
+SEND_KEY_CMD_V26 = [0xa3, 0x1e, 0x00] + [0x00] * 30
 ERASE_CHIP_CMD_V2 = [0xa4, 0x01, 0x00, 0x08]
 WRITE_CMD_V2 = [0xa5, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 VERIFY_CMD_V2 = [0xa6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
@@ -91,8 +92,10 @@ def __read_cfg_ch55x_v2(dev):
     ret = dev.read(EP_IN_ADDR, 30, USB_MAX_TIMEOUT)
 
     ver_str = 'V%d.%d%d' % (ret[19], ret[20], ret[21])
-    chk_sum = (ret[22] + ret[23] + ret[24] + ret[25]) % 256
-
+    if ret[19] == 2 and ret[20] >= 6:
+        chk_sum = (ret[22] + ret[23] + ret[24] + ret[25] + ret[26] + ret[27] + ret[28] + ret[29]) % 256
+    else:
+        chk_sum = (ret[22] + ret[23] + ret[24] + ret[25]) % 256
     return (ver_str, chk_sum)
 
 
@@ -107,8 +110,8 @@ def __write_key_ch55x_v20(dev, chk_sum):
         return None
 
 
-def __write_key_ch55x_v23(dev):
-    dev.write(EP_OUT_ADDR, SEND_KEY_CMD_V23)
+def __write_key_ch55x_v23(dev, key_cmd):
+    dev.write(EP_OUT_ADDR, key_cmd)
     ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
     if ret[3] == 0:
         return True
@@ -380,8 +383,12 @@ def main():
             if ret is None:
                 sys.exit('Failed to verify firmware of CH55x.')
         else:
-            if btver in ['V2.31', 'V2.40']:
-                ret = __write_key_ch55x_v23(dev)
+            if btver in ['V2.31', 'V2.40', 'V2.60', 'V2.61', 'V2.70']:
+                if float(btver[1:]) >= 2.6:
+                    ret = __write_key_ch55x_v23(dev, SEND_KEY_CMD_V26)
+                else:
+                    ret = __write_key_ch55x_v23(dev, SEND_KEY_CMD_V23)
+                
                 if ret is None:
                     sys.exit('Failed to write key to CH55x.')
 
