@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import os
-import time
-import array
 import math
 import argparse
 
@@ -22,27 +19,13 @@ EP_IN_ADDR = 0x82
 USB_MAX_TIMEOUT = 2000
 
 DETECT_CHIP_CMD_V2 = [
-    0xa1,
-    0x12,
-    0x00,
-    0x52,
-    0x11,
-    0x4d,
-    0x43,
-    0x55,
-    0x20,
-    0x49,
-    0x53,
-    0x50,
-    0x20,
-    0x26,
-    0x20,
-    0x57,
-    0x43,
-    0x48,
-    0x2e,
-    0x43,
-    0x4e]
+    0xa1, 0x12, 0x00,
+    0x52, 0x11, 0x4d,
+    0x43, 0x55, 0x20,
+    0x49, 0x53, 0x50,
+    0x20, 0x26, 0x20,
+    0x57, 0x43, 0x48,
+    0x2e, 0x43, 0x4e]
 END_FLASH_CMD_V2 = [0xa2, 0x01, 0x00, 0x00]
 RESET_RUN_CMD_V2 = [0xa2, 0x01, 0x00, 0x01]
 SEND_KEY_CMD_V20 = [0xa3, 0x30, 0x00]
@@ -146,8 +129,13 @@ def __write_key_ch55x_v23(dev):
         return None
 
 
-def __erase_chip_ch55x_v2(dev):
-    dev.write(EP_OUT_ADDR, ERASE_CHIP_CMD_V2)
+def __erase_chip_ch55x_v2(dev, binary_size):
+    # Ceil the binary size to the next multiple of 0x1000
+    erase_size = math.ceil(binary_size/0x1000) & 0xff
+    print('Erase size: 0x%x' % (erase_size * 0x1000))
+    cmd = ERASE_CHIP_CMD_V2.copy()
+    cmd[3] = erase_size
+    dev.write(EP_OUT_ADDR, cmd)
     ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
     if ret[3] == 0:
         return True
@@ -372,6 +360,11 @@ def main():
 
     print('Found %s.' % ret['device_name'])
     chip_id = ret['chip_id']
+    
+    if len(payload) > ret['device_flash_size']:
+        print('The binary is too large for the device.')
+        print('Binary size: 0x%x, Flash size: 0x%x' % (len(payload), ret['device_flash_size']))
+        sys.exit(-1)
 
     ret = __read_cfg_ch55x_v2(dev)
     chk_sum = ret[1]
@@ -387,7 +380,7 @@ def main():
             if ret is None:
                 sys.exit('Failed to write key to CH55x.')
 
-            ret = __erase_chip_ch55x_v2(dev)
+            ret = __erase_chip_ch55x_v2(dev, len(payload))
             if ret is None:
                 sys.exit('Failed to erase CH55x.')
 
@@ -404,7 +397,7 @@ def main():
                 if ret is None:
                     sys.exit('Failed to write key to CH55x.')
 
-                ret = __erase_chip_ch55x_v2(dev)
+                ret = __erase_chip_ch55x_v2(dev, len(payload))
                 if ret is None:
                     sys.exit('Failed to erase CH55x.')
 
