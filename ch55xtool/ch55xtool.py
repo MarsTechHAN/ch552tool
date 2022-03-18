@@ -352,19 +352,19 @@ def main():
         
     dev = ret[0]
 
-    ret = __detect_ch55x_v2(dev)
-    if ret is None:
+    chip_info = __detect_ch55x_v2(dev)
+    if chip_info is None:
         print('Unable to detect CH55x.')
         print('Welcome to report this issue with a screen shot from the official CH55x tool.')
         sys.exit(-1)
 
-    print('Found %s.' % ret['device_name'])
-    chip_id = ret['chip_id']
+    print('Found %s.' % chip_info['device_name'])
+    chip_id = chip_info['chip_id']
     
-    ret = __read_cfg_ch55x_v2(dev)
-    chk_sum = ret[1]
+    btver, chk_sum = __read_cfg_ch55x_v2(dev)
+    chip_info['btver'] = btver
 
-    print('BTVER: %s.' % ret[0])
+    print('BTVER: %s.' % btver)
 
     if args.file != '':
         payload = list(open(args.file, 'rb').read())
@@ -375,7 +375,7 @@ def main():
             print('Binary size: 0x%x, Flash size: 0x%x' % (len(payload), ret['device_flash_size']))
             sys.exit(-1)
 
-        if ret[0] in ['V2.30']:
+        if btver in ['V2.30']:
             ret = __write_key_ch55x_v20(dev, chk_sum)
             if ret is None:
                 sys.exit('Failed to write key to CH55x.')
@@ -392,7 +392,7 @@ def main():
             if ret is None:
                 sys.exit('Failed to verify firmware of CH55x.')
         else:
-            if ret[0] in ['V2.31', 'V2.40']:
+            if btver in ['V2.31', 'V2.40']:
                 ret = __write_key_ch55x_v23(dev)
                 if ret is None:
                     sys.exit('Failed to write key to CH55x.')
