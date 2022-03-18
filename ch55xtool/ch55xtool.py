@@ -38,6 +38,7 @@ READ_CFG_CMD_V2 = [0xa7, 0x02, 0x00, 0x1f, 0x00]
 
 WCHChip = namedtuple("WCHChip", "name flash_size dataflash_size chip_id")
 chips = [
+        WCHChip("CH549", 60*1024, 1024, 0x49),
         WCHChip("CH551", 10240, 128, 0x51),
         WCHChip("CH552", 16384, 128, 0x52),
         WCHChip("CH553", 10240, 128, 0x53),
