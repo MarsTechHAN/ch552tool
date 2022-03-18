@@ -226,7 +226,7 @@ def __write_flash_ch55x_v23(dev, chk_sum, chip_id, payload):
         if ret[4] != 0x00:
             return None
 
-    if chip_id == 0x3f:
+    if chip_id in [0x3f, 0x70]:
         # My CH32V103 with BT V2.60 will fail to verify without this empty write
         # My CH579 with BT V2.61 will fail to verify *with* this empty write
         # I'm not sure if this is required due to MCU or bootloader version
