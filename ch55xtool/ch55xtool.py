@@ -4,6 +4,7 @@
 import sys
 import math
 import argparse
+from collections import namedtuple
 
 import usb.core
 import usb.util
@@ -35,32 +36,15 @@ WRITE_CMD_V2 = [0xa5, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 VERIFY_CMD_V2 = [0xa6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 READ_CFG_CMD_V2 = [0xa7, 0x02, 0x00, 0x1f, 0x00]
 
-CH55X_IC_REF = {}
-CH55X_IC_REF[0x51] = {
-    'device_name': 'CH551',
-    'device_flash_size': 10240,
-    'device_dataflash_size': 128,
-    'chip_id': 0x51}
-CH55X_IC_REF[0x52] = {
-    'device_name': 'CH552',
-    'device_flash_size': 16384,
-    'device_dataflash_size': 128,
-    'chip_id': 0x52}
-CH55X_IC_REF[0x53] = {
-    'device_name': 'CH553',
-    'device_flash_size': 10240,
-    'device_dataflash_size': 128,
-    'chip_id': 0x53}
-CH55X_IC_REF[0x54] = {
-    'device_name': 'CH554',
-    'device_flash_size': 14336,
-    'device_dataflash_size': 128,
-    'chip_id': 0x54}
-CH55X_IC_REF[0x59] = {
-    'device_name': 'CH559',
-    'device_flash_size': 61440,
-    'device_dataflash_size': 128,
-    'chip_id': 0x59}
+WCHChip = namedtuple("WCHChip", "name flash_size dataflash_size chip_id")
+chips = [
+        WCHChip("CH551", 10240, 128, 0x51),
+        WCHChip("CH552", 16384, 128, 0x52),
+        WCHChip("CH553", 10240, 128, 0x53),
+        WCHChip("CH554", 14336, 128, 0x54),
+        WCHChip("CH559", 61440, 128, 0x59),
+    ]
+
 # =============================================
 
 
@@ -93,10 +77,11 @@ def __get_dfu_device(idVendor=DFU_ID_VENDOR, idProduct=DFU_ID_PRODUCT):
 def __detect_ch55x_v2(dev):
     dev.write(EP_OUT_ADDR, DETECT_CHIP_CMD_V2)
     ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
-    try:
-        return CH55X_IC_REF[ret[4]]
-    except KeyError:
-        return None
+    chip = [c for c in chips if c.chip_id == ret[4]]
+    if chip:
+        return chip[0]
+    else:
+        print("No (currently) supported part was found, but we received a proper response: ", ret)
 
 
 def __read_cfg_ch55x_v2(dev):
@@ -352,17 +337,18 @@ def main():
         
     dev = ret[0]
 
-    chip_info = __detect_ch55x_v2(dev)
-    if chip_info is None:
-        print('Unable to detect CH55x.')
+    chip = __detect_ch55x_v2(dev)
+    if chip is None:
+        print('Unable to detect a supported part')
         print('Welcome to report this issue with a screen shot from the official CH55x tool.')
+        # Attempt to close it cleanly...
+        ret = __end_flash_ch55x_v2(dev)
         sys.exit(-1)
 
-    print('Found %s.' % chip_info['device_name'])
-    chip_id = chip_info['chip_id']
+    print('Found %s.' % chip.name)
+    chip_id = chip.chip_id
     
     btver, chk_sum = __read_cfg_ch55x_v2(dev)
-    chip_info['btver'] = btver
 
     print('BTVER: %s.' % btver)
 
@@ -370,9 +356,9 @@ def main():
         payload = list(open(args.file, 'rb').read())
         if args.file.endswith('.hex') or args.file.endswith('.ihx') or payload[0]==58:
             print("WARNING: This looks like a hex file. This tool only supports binary files.")
-        if len(payload) > ret['device_flash_size']:
+        if len(payload) > chip.flash_size:
             print('The binary is too large for the device.')
-            print('Binary size: 0x%x, Flash size: 0x%x' % (len(payload), ret['device_flash_size']))
+            print('Binary size: 0x%x, Flash size: 0x%x' % (len(payload), chip.flash_size))
             sys.exit(-1)
 
         if btver in ['V2.30']:
