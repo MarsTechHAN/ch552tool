@@ -361,11 +361,6 @@ def main():
     print('Found %s.' % ret['device_name'])
     chip_id = ret['chip_id']
     
-    if len(payload) > ret['device_flash_size']:
-        print('The binary is too large for the device.')
-        print('Binary size: 0x%x, Flash size: 0x%x' % (len(payload), ret['device_flash_size']))
-        sys.exit(-1)
-
     ret = __read_cfg_ch55x_v2(dev)
     chk_sum = ret[1]
 
@@ -375,6 +370,11 @@ def main():
         payload = list(open(args.file, 'rb').read())
         if args.file.endswith('.hex') or args.file.endswith('.ihx') or payload[0]==58:
             print("WARNING: This looks like a hex file. This tool only supports binary files.")
+        if len(payload) > ret['device_flash_size']:
+            print('The binary is too large for the device.')
+            print('Binary size: 0x%x, Flash size: 0x%x' % (len(payload), ret['device_flash_size']))
+            sys.exit(-1)
+
         if ret[0] in ['V2.30']:
             ret = __write_key_ch55x_v20(dev, chk_sum)
             if ret is None:
