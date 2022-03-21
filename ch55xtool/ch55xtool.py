@@ -250,11 +250,15 @@ def __send_key_base(dev, key_base):
 	else:
 		return None
 
-def __flash_ops_write_verify(dev, key_xor_chksum, data, func="Write",max_packet_size=64):
-	if(func not in [ 'Write' , 'Verify'] ):
+def __flash_ops_write_verify(dev, key_xor_chksum, data, func="FlashWrite"):
+	if(func not in [ 'FlashWrite' , 'FlashVerify', 'DataWrite'] ):
 		return None
 	data_length = len(data)
 	curr_addr = 0
+	cfg = dev.get_active_configuration()
+	intf = cfg[(0,0)]
+	ep_out = usb.util.find_descriptor(intf, bEndpointAddress=EP_OUT_ADDR)
+	max_packet_size = ep_out.wMaxPacketSize
 	max_data_len_perpack = max_packet_size - 3 - 5
 	data_buff = bytearray(max_data_len_perpack)
 	while curr_addr < data_length:
@@ -276,7 +280,7 @@ def __flash_ops_write_verify(dev, key_xor_chksum, data, func="Write",max_packet_
 			
 		cmd_pl = curr_addr.to_bytes(4,'little') + bytes([random.randint(0,255)]) + data_buff[:pkt_length]
 		
-		ret, ret_pl = cmd_exec(dev, 'Flash'+func, cmd_pl)
+		ret, ret_pl = cmd_exec(dev, func, cmd_pl)
 		if( ret == None or ret_pl[0] != 0x00):
 			return None
 		curr_addr = curr_addr + pkt_length
@@ -285,11 +289,46 @@ def __flash_ops_write_verify(dev, key_xor_chksum, data, func="Write",max_packet_
 	else:
 		return curr_addr
 
-def __erase_chip_ch5xx(dev, chip_ref):
+def __data_flash_read(dev, data_flash_size):
+	curr_addr = 0
+	read_data = b''
+	cfg = dev.get_active_configuration()
+	intf = cfg[(0,0)]
+	ep_in = usb.util.find_descriptor(intf, bEndpointAddress=EP_IN_ADDR)
+	max_packet_size = ep_in.wMaxPacketSize
+	max_rcv_len_perpack = max_packet_size - 4 - 2
+	while curr_addr < data_flash_size:
+		left_len = data_flash_size - curr_addr
+		if (left_len) > max_rcv_len_perpack:
+			rcv_pkt_length = max_rcv_len_perpack
+		else:
+			rcv_pkt_length = left_len
+		cmd_pl = curr_addr.to_bytes(4,'little') + rcv_pkt_length.to_bytes(2,'little')
+		ret, ret_pl = cmd_exec(dev, 'DataRead', cmd_pl)
+		if( ret == None or ret_pl[0] != 0x00):
+			return None, read_data
+		read_data += bytes(ret_pl[2:])
+		curr_addr = curr_addr + len(ret_pl[2:])
+	if(curr_addr > data_flash_size):
+		return data_flash_size, read_data
+	else:
+		return curr_addr, read_data
+
+def __erase_program_flash_ch5xx(dev, chip_ref):
 	# We assume pages size is 1kb
 	erase_page_cnt = chip_ref['flash_size']>>10
 	cmd_pl = erase_page_cnt.to_bytes(4,'little')
 	ret, ret_pl = cmd_exec(dev,'FlashErase', cmd_pl)
+	if ret_pl[0] == 0:
+		return True
+	else:
+		return None
+
+def __erase_data_flash_ch5xx(dev, chip_ref):
+	# We assume pages size is 1kb
+	erase_page_cnt = chip_ref['dataflash_size']>>10
+	cmd_pl = int(0).to_bytes(4,'little') + erase_page_cnt.to_bytes(1,'little')
+	ret, ret_pl = cmd_exec(dev,'DataErase', cmd_pl)
 	if ret_pl[0] == 0:
 		return True
 	else:
@@ -307,9 +346,10 @@ def __end_flash_ch5xx(dev, restart_after = False):
 def main():
 	parser = argparse.ArgumentParser(
 		description="USBISP Tool For WinChipHead CH55x/CH56x .")
+
 	parser.add_argument(
 		'-f', '--flash', type=str, default='',
-		help="The target file to be flashed. This must be a binary file (hex files are not supported). Flashing include chipe erase in front.")
+		help="The target file to be written to program flash. This must be a binary file (hex files are not supported). Flashing include chipe erase in front.")
 	parser.add_argument(
 		'-e', '--erase_flash', action='store_true', default=False,
 		help="Erase chip program flash.")
@@ -318,8 +358,18 @@ def main():
 		help="Verify flash.")
 
 	parser.add_argument(
-		'-c', '--clean', action='store_true', default=False,
+		'-d', '--data', type=str, default='',
+		help="The target file to be written to data flash. This must be a binary file (hex files are not supported). Flashing include chipe erase in front.")
+	parser.add_argument(
+		'-c', '--erase_dataflash', action='store_true', default=False,
 		help="Clean chip data eeprom.")
+	parser.add_argument(
+		'-g', '--read_dataflash', type=str, default='',
+		help="Read chip data eeprom.")
+	parser.add_argument(
+		'--verify_data', type=str, action='store', nargs='?', const='', default=None,
+		help="Verify data flash.")
+
 
 	parser.add_argument(
 		'-r', '--reset_at_end', action='store_true', default=False,
@@ -376,9 +426,82 @@ def main():
 
 	chk_sum = __chip_uid_chk_sum(chip_subid, uid)
 
+	if(args.read_dataflash !=''):
+		ret, ret_data = __data_flash_read(dev, chip_ref['dataflash_size'])
+		if(ret is not None):
+			data_write_file = open(args.read_dataflash,'wb')
+			data_write_file.write(ret_data)
+			data_write_file.close()
+	
+	if(args.data != ''):
+		dataflash_write_data = open(args.data, 'rb').read()
+		if(args.data.endswith('.hex') or args.data.endswith('.ihx')):
+			print("WARNING: This looks like a hex file. This tool only supports binary files.")
+		if len(dataflash_write_data) > chip_ref['dataflash_size']:
+			print('The binary for Data flashing is too large for the device.')
+			print('Binary size: %d, DataFlash size: %d' % (len(dataflash_write_data),chip_ref['dataflash_size']))
+			sys.exit(-1)
+			
+	if(args.data != '' or args.erase_dataflash==True):
+		print('Erasing chip data flash.',end="")
+		ret = __erase_data_flash_ch5xx(dev,chip_ref)
+		if ret is None:
+			sys.exit(' Failed.')
+		else:
+			print(' Done.')
+
+	if(args.data != ''):
+		if(len(dataflash_write_data)>0):
+			if(dataflash_write_data[0]==58):
+				print("WARNING: Flashing data looks like a hex file. This tool only supports binary files.")
+			enc_key, key_b = __gen_key_values(chip_id, chk_sum)
+			ret = __send_key_base(dev,key_b)
+			if ret is None:
+				sys.exit('Failed to write key for DataFlash write to CH5xx.')
+			print('DataFlashing chip.',end='')
+			ret = __flash_ops_write_verify(dev, enc_key, dataflash_write_data, func="DataWrite")
+			if ret is None:
+				sys.exit('Failed.')
+			else:
+				print(' Done.')
+		else:
+			print('Nothing to write to program flash.')
+
+	if(args.verify_data != None):
+		if(args.verify_data != ''):
+			dataflash_verify_data = open(args.verify_data, 'rb').read()
+			if(args.verify_data.endswith('.hex') or args.verify_data.endswith('.ihx')):
+				print("WARNING: This looks like a hex file. This tool only supports binary files.")
+			if len(dataflash_verify_data) > chip_ref['dataflash_size']:
+				print('The binary for verifying is too large for the device.')
+				print('Binary size: %d, DataFlash size: %d' % (len(dataflash_verify_data),chip_ref['dataflash_size']))
+				sys.exit(-1)
+		else:
+			if(args.data == ''):
+				dataflash_verify_data = b''
+			else:
+				dataflash_verify_data = dataflash_write_data
+
+		if(len(dataflash_verify_data)>0):
+			if(dataflash_verify_data[0]==58):
+				print("WARNING: Verifying data looks like a hex file. This tool only supports binary files.")
+
+			print('Verifying Dataflash.',end='')
+			ret, ret_data = __data_flash_read(dev, len(dataflash_verify_data))
+			if ret is None:
+				sys.exit(' Data read failed.')
+			elif(ret_data != dataflash_verify_data):
+				print(ret_data)
+				print(dataflash_verify_data)
+				sys.exit(' Compare failed.')
+			else:
+				print(' Done.')
+		else:
+			print('Nothing to verifying with data flash.')
+
 	flash_file = args.flash
 	if(flash_file != ''):
-		flash_write_data = list(open(flash_file, 'rb').read())
+		flash_write_data = open(flash_file, 'rb').read()
 		if(flash_file.endswith('.hex') or flash_file.endswith('.ihx')):
 			print("WARNING: This looks like a hex file. This tool only supports binary files.")
 		if len(flash_write_data) > chip_ref['flash_size']:
@@ -388,9 +511,9 @@ def main():
 
 	if(flash_file != '' or args.erase_flash==True):
 		print('Erasing chip flash.',end="")
-		ret = __erase_chip_ch5xx(dev,chip_ref)
+		ret = __erase_program_flash_ch5xx(dev,chip_ref)
 		if ret is None:
-			sys.exit(' Failed to erase CH55x.')
+			sys.exit(' Failed.')
 		else:
 			print(' Done.')
 
@@ -403,7 +526,7 @@ def main():
 			if ret is None:
 				sys.exit('Failed to write key for flash write to CH5xx.')
 			print('Flashing chip.',end='')
-			ret = __flash_ops_write_verify(dev, enc_key, flash_write_data, func="Write")
+			ret = __flash_ops_write_verify(dev, enc_key, flash_write_data, func="FlashWrite")
 			if ret is None:
 				sys.exit('Failed to flash firmware of CH55x.')
 			else:
@@ -413,7 +536,7 @@ def main():
 
 	if(args.verify_flash != None):
 		if(args.verify_flash != ''):
-			flash_verify_data = list(open(args.verify_flash, 'rb').read())
+			flash_verify_data = open(args.verify_flash, 'rb').read()
 			if(args.verify_flash.endswith('.hex') or args.verify_flash.endswith('.ihx')):
 				print("WARNING: This looks like a hex file. This tool only supports binary files.")
 			if len(flash_verify_data) > chip_ref['flash_size']:
@@ -434,7 +557,7 @@ def main():
 			if ret is None:
 				sys.exit('Failed to write key for flash verify to CH5xx.')
 			print('Verifying flash.',end='')
-			ret = __flash_ops_write_verify(dev, enc_key, flash_verify_data, func="Verify")
+			ret = __flash_ops_write_verify(dev, enc_key, flash_verify_data, func="FlashVerify")
 			if ret is None:
 				sys.exit(' Failed to verify firmware of CH55x.')
 			else:

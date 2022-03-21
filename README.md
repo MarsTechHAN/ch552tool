@@ -6,9 +6,14 @@ An open sourced python command line flash tool for flashing WinChipHead CH55x se
 Usage
 ------------
 * __-f/--flash \<filename\>__ Erase the whole chip, and flash the bin file to the CH55x.
-* __-e/--erase\_flash__  Erase the whole chip.
+* __-e/--erase\_flash__  Erase the whole program flash.
 * __--verify\_flash__ [filename] Verify program flash contend with given file, if filename ommited verifying with flashed data. No verifying perormed without this flag.
 * __-r/--reset\_at\_end__ Issue reset and run after all.
+* __-d/--data \<filename\>__ Erase the whole data flash and write the bin file to the CH55x.
+* __-e/--erase\_flash__  Erase the whole data flash.
+* __--verify\_data__ [filename] Verify data flash contend with given file, if filename ommited verifying with written data. No verifying perormed without this flag.
+* __-g/--read\_dataflash__ Read content of data flash to file.
+
 
 ```bash
 python3 -m ch55xtool -f THE_BINARY_FILE.bin
