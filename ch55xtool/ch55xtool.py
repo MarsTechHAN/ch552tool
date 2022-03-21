@@ -394,32 +394,33 @@ def main():
 			print('The binary is too large for the device.')
 			print('Binary size: %d, Flash size: %d' % (len(file_data),chip_ref['device_flash_size']))
 			sys.exit(-1)
-		if ver_str in ['02.30', '02.31', '02.40']:
-			chk_sum = __chip_uid_chk_sum(chip_subid, uid)
-
-			enc_key, key_b = __gen_key_values(chip_id, chk_sum)
-			ret = __send_key_base(dev,key_b)
-			if ret is None:
-				sys.exit('Failed to write key for flash write to CH5xx.')
-
-			ret = __erase_chip_ch5xx(dev,chip_ref)
-			if ret is None:
-				sys.exit('Failed to erase CH55x.')
-
-			ret = __flash_ops_write_verify(dev, enc_key, file_data, func="Write")
-			if ret is None:
-				sys.exit('Failed to flash firmware of CH55x.')
-
-			enc_key, key_b = __gen_key_values(chip_id, chk_sum)
-			ret = __send_key_base(dev,key_b)
-			if ret is None:
-				sys.exit('Failed to write key for flash verify to CH5xx.')
-
-			ret = __flash_ops_write_verify(dev, enc_key, file_data, func="Verify")
-			if ret is None:
-				sys.exit('Failed to verify firmware of CH55x.')
-		else:
+			
+		if(float(ver_str)<2.3):
 			sys.exit('Bootloader version not supported.')
+
+		chk_sum = __chip_uid_chk_sum(chip_subid, uid)
+
+		enc_key, key_b = __gen_key_values(chip_id, chk_sum)
+		ret = __send_key_base(dev,key_b)
+		if ret is None:
+			sys.exit('Failed to write key for flash write to CH5xx.')
+
+		ret = __erase_chip_ch5xx(dev,chip_ref)
+		if ret is None:
+			sys.exit('Failed to erase CH55x.')
+
+		ret = __flash_ops_write_verify(dev, enc_key, file_data, func="Write")
+		if ret is None:
+			sys.exit('Failed to flash firmware of CH55x.')
+
+		enc_key, key_b = __gen_key_values(chip_id, chk_sum)
+		ret = __send_key_base(dev,key_b)
+		if ret is None:
+			sys.exit('Failed to write key for flash verify to CH5xx.')
+
+		ret = __flash_ops_write_verify(dev, enc_key, file_data, func="Verify")
+		if ret is None:
+			sys.exit('Failed to verify firmware of CH55x.')
 
 		ret, ret_pl = __end_flash_ch5xx(dev, restart_after = args.reset_at_end)
 		if(ret is True):
