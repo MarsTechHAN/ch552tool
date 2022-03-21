@@ -19,37 +19,22 @@ EP_IN_ADDR	= 0x82
 
 USB_MAX_TIMEOUT = 2000
 
-CH55X_IC_REF = {}
-CH55X_IC_REF[0x51] = {
-	'name': 'CH551',
-	'flash_size': 10240,
-	'dataflash_size': 128,
-	'chip_id': 0x51}
-CH55X_IC_REF[0x52] = {
-	'name': 'CH552',
-	'flash_size': 16384,
-	'dataflash_size': 128,
-	'chip_id': 0x52}
-CH55X_IC_REF[0x53] = {
-	'name': 'CH553',
-	'flash_size': 10240,
-	'dataflash_size': 128,
-	'chip_id': 0x53}
-CH55X_IC_REF[0x54] = {
-	'name': 'CH554',
-	'flash_size': 14336,
-	'dataflash_size': 128,
-	'chip_id': 0x54}
-CH55X_IC_REF[0x59] = {
-	'name': 'CH559',
-	'flash_size': 61440,
-	'dataflash_size': 128,
-	'chip_id': 0x59}
-CH55X_IC_REF[0x68] = {
-	'name': 'CH568',
-	'flash_size': (128+64)*1024,
-	'dataflash_size': 32*1024,
-	'chip_id': 0x68}
+CH55X_IC_REF = {
+	0x3f:{'name':'CH32V103', 'flash_size': 64*1024, 'dataflash_size': 0, 'chip_id': 0x3f, 'erase_required_pages':True},
+	0x49:{'name':'CH549', 'flash_size': 60*1024, 'dataflash_size': 1024, 'chip_id': 0x49, 'erase_required_pages':False},
+	0x51:{'name':'CH551', 'flash_size': 10240, 'dataflash_size': 128, 'chip_id': 0x51, 'erase_required_pages':False},
+	0x52:{'name':'CH552', 'flash_size': 16384, 'dataflash_size': 128, 'chip_id': 0x52, 'erase_required_pages':False},
+	0x53:{'name':'CH553', 'flash_size': 10240, 'dataflash_size': 128, 'chip_id': 0x53, 'erase_required_pages':False},
+	0x54:{'name':'CH554', 'flash_size': 14336, 'dataflash_size': 128, 'chip_id': 0x54, 'erase_required_pages':False},
+	0x59:{'name':'CH559', 'flash_size': 61440, 'dataflash_size': 128, 'chip_id': 0x59, 'erase_required_pages':False},
+	0x68:{'name':'CH568', 'flash_size': 192*1024, 'dataflash_size': 32*1024, 'chip_id': 0x68, 'erase_required_pages':False},
+	0x70:{'name':'CH32V307', 'flash_size': 256*1024, 'dataflash_size': 128, 'chip_id': 0x70, 'erase_required_pages':False},
+	0x71:{'name':'CH571', 'flash_size': 192*1024, 'dataflash_size': 0, 'chip_id': 0x71, 'erase_required_pages':True},
+	0x73:{'name':'CH573', 'flash_size': 448*1024, 'dataflash_size': 0, 'chip_id': 0x73, 'erase_required_pages':True},
+	0x79:{'name':'CH579', 'flash_size': 256*1024, 'dataflash_size': 0, 'chip_id': 0x79, 'erase_required_pages':True},
+	0x82:{'name':'CH582', 'flash_size': 448*1024, 'dataflash_size': 0, 'chip_id': 0x82, 'erase_required_pages':True},
+}
+
 # =============================================
 WCH_CMDS = 	{	"Detect":		b'\xA1',
 				"End":			b'\xA2',
