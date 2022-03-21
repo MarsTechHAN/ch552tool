@@ -396,6 +396,10 @@ def main():
 		file_data = list(open(flash_file, 'rb').read())
 		if flash_file.endswith('.hex') or flash_file.endswith('.ihx') or file_data[0]==58:
 			print("WARNING: This looks like a hex file. This tool only supports binary files.")
+		if len(file_data) > chip_ref['device_flash_size']:
+			print('The binary is too large for the device.')
+			print('Binary size: %d, Flash size: %d' % (len(file_data),chip_ref['device_flash_size']))
+			sys.exit(-1)
 		if ver_str in ['02.30', '02.31', '02.40']:
 			chk_sum = __chip_uid_chk_sum(chip_subid, uid)
 
