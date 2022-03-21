@@ -10,7 +10,7 @@ Usage
 * __--verify\_flash__ [filename] Verify program flash contend with given file, if filename ommited verifying with flashed data. No verifying perormed without this flag.
 * __-r/--reset\_at\_end__ Issue reset and run after all.
 * __-d/--data \<filename\>__ Erase the whole data flash and write the bin file to the CH55x.
-* __-e/--erase\_flash__  Erase the whole data flash.
+* __-c/--erase\_dataflash__  Erase the whole data flash.
 * __--verify\_data__ [filename] Verify data flash contend with given file, if filename ommited verifying with written data. No verifying perormed without this flag.
 * __-g/--read\_dataflash__ Read content of data flash to file.
 
