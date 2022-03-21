@@ -64,9 +64,6 @@ WCH_CMDS = 	{	"Detect":		b'\xA1',
 				"DataRead":		b'\xAB',
 			}
 
-END_FLASH_CMD_V2 =   [0xa2, 0x01, 0x00] + [0x00]
-RESET_RUN_CMD_V2 =   [0xa2, 0x01, 0x00] + [0x01]
-
 # Meaning of those two values not yet clear :(
 DETECT_PL_START = b'\x42\x10'
 #DETECT_PL_START = b'\x52\x11'
@@ -313,16 +310,14 @@ def __erase_chip_ch5xx(dev, chip_ref):
 	else:
 		return None
 
-def __end_flash_ch55x_v2(dev):
-	dev.write(EP_OUT_ADDR, END_FLASH_CMD_V2)
-	ret = dev.read(EP_IN_ADDR, 6, USB_MAX_TIMEOUT)
-	if ret[4] != 0x00:
-		return None
+def __end_flash_ch5xx(dev, restart_after = False):
+	cmd_pl  = bytes([restart_after])
+	if(restart_after):
+		cmd_bin = WCH_CMDS.get("End")
+		cmd_send(dev, cmd_bin, cmd_pl)
+		return True,None
 	else:
-		return True
-
-def __restart_run_ch55x_v2(dev):
-	dev.write(EP_OUT_ADDR, RESET_RUN_CMD_V2)
+		return cmd_exec(dev, "End", cmd_pl)
 
 def main():
 	parser = argparse.ArgumentParser(
@@ -348,7 +343,6 @@ def main():
 		help="Verbose program process output.")
 
 	args = parser.parse_args()
-
 
 	ret = __get_dfu_device()
 	if ret[0] is None:
@@ -427,15 +421,19 @@ def main():
 		else:
 			sys.exit('Bootloader version not supported.')
 
-		ret = __end_flash_ch55x_v2(dev)
-		if ret is None:
-			sys.exit('Failed to end flash process.')
-
-		print('Flash done.')
-
-		if args.reset_at_end:
-			__restart_run_ch55x_v2(dev)
-			print('Restart and run.')
+		ret, ret_pl = __end_flash_ch5xx(dev, restart_after = args.reset_at_end)
+		if(ret is True):
+			print('Flash done.',end="")
+			print(' Restart and run.')
+		elif(ret is None):
+			sys.exit('Failed to end flash process. No response.')
+		else:
+			if(ret_pl != None):
+				if ret_pl[0] != 0x00:
+					resp_str = ' Response: %02x' % (ret_pl[0])
+					sys.exit('Failed to end flash process.'+ resp_str)
+				else:
+					print('Flash done.')
 
 if __name__ == '__main__':
 	sys.exit(main())
