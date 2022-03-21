@@ -89,13 +89,14 @@ def cmd_send(dev, cmd_bin, payload):
 	dev.write(EP_OUT_ADDR,packet)
 
 def cmd_reply_receive(dev, cmd_bin):
-	reply = dev.read(EP_IN_ADDR, dev.bMaxPacketSize0, USB_MAX_TIMEOUT)
-	#reply = dev.read(EP_IN_ADDR, 4, USB_MAX_TIMEOUT)
+	cfg = dev.get_active_configuration()
+	intf = cfg[(0,0)]
+	ep_in = usb.util.find_descriptor(intf, bEndpointAddress=EP_IN_ADDR)
+	reply = ep_in.read(ep_in.wMaxPacketSize, USB_MAX_TIMEOUT)
 	if((reply != None) and (reply[0] == cmd_bin[0])):
 		reply_val = reply[1]
 		reply_payload_len = int.from_bytes(reply[2:4],'little')
 		if(reply_payload_len > 0):
-			#reply_payload = dev.read(EP_IN_ADDR, reply_payload_len, USB_MAX_TIMEOUT)
 			reply_payload = reply[4:4+reply_payload_len]
 		else:
 			reply_payload = None
@@ -174,26 +175,26 @@ def __read_cfg_ch5xx(dev, req_fields, chip_id, chip_subid):
 		
 	cfg_dict["Fields"] = reply_fields
 	if(reply_fields & CFG_FLAG_UNKN1):
-		cfg_dict[CFG_FLAG_UNKN1] = ret_pl[reply_prc_bytes:reply_prc_bytes+4]
+		cfg_dict[CFG_FLAG_UNKN1] = int.from_bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4],'little')
 		reply_prc_bytes += 4
 		
 	if(reply_fields & CFG_FLAG_UNKN2):
-		cfg_dict[CFG_FLAG_UNKN2] = ret_pl[reply_prc_bytes:reply_prc_bytes+4]
+		cfg_dict[CFG_FLAG_UNKN2] = int.from_bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4],'little')
 		reply_prc_bytes += 4
 		
 	if(reply_fields & CFG_FLAG_UNKN3):
-		cfg_dict[CFG_FLAG_UNKN3] = ret_pl[reply_prc_bytes:reply_prc_bytes+4]
+		cfg_dict[CFG_FLAG_UNKN3] = int.from_bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4],'little')
 		reply_prc_bytes += 4
 
 	if(reply_fields & CFG_FLAG_BOOTVER):
-		cfg_dict[CFG_FLAG_BOOTVER] = ret_pl[reply_prc_bytes:reply_prc_bytes+4]
+		cfg_dict[CFG_FLAG_BOOTVER] = bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4])
 		reply_prc_bytes += 4
 
 	if(reply_fields & CFG_FLAG_UID):
 		if((chip_subid == 0x11) and (chip_id not in [0x55, 0x56, 0x57])):
-			cfg_dict[CFG_FLAG_UID] = ret_pl[reply_prc_bytes:reply_prc_bytes+4] + b'\x00'*4
+			cfg_dict[CFG_FLAG_UID] = bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4]) + b'\x00'*4
 		else:
-			cfg_dict[CFG_FLAG_UID] = ret_pl[reply_prc_bytes:reply_prc_bytes+8]
+			cfg_dict[CFG_FLAG_UID] = bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+8])
 		reply_prc_bytes += 8
 
 	return ret, cfg_dict
@@ -209,7 +210,7 @@ def __write_cfg_ch5xx(dev, cfg_dict):
 		field_val = cfg_dict.get(CFG_FLAG_UNKN1)
 		if(field_val != None and len(field_val) == 4):
 			set_fields	|= CFG_FLAG_UNKN1
-			cmd_pl 		+= field_val
+			cmd_pl 		+= field_val.to_bytes(4,'little')
 		else:
 			print("Incorrect or no value for cfg field 0x%02X"%(CFG_FLAG_UNKN1))
 
@@ -217,7 +218,7 @@ def __write_cfg_ch5xx(dev, cfg_dict):
 		field_val = cfg_dict.get(CFG_FLAG_UNKN2)
 		if(field_val != None and len(field_val) == 4):
 			set_fields	|= CFG_FLAG_UNKN2
-			cmd_pl 		+= field_val
+			cmd_pl 		+= field_val.to_bytes(4,'little')
 		else:
 			print("Incorrect or no value for cfg field 0x%02X"%(CFG_FLAG_UNKN2))
 
@@ -225,7 +226,7 @@ def __write_cfg_ch5xx(dev, cfg_dict):
 		field_val = cfg_dict.get(CFG_FLAG_UNKN3)
 		if(field_val != None and len(field_val) == 4):
 			set_fields	|= CFG_FLAG_UNKN3
-			cmd_pl 		+= field_val
+			cmd_pl 		+= field_val.to_bytes(4,'little')
 		else:
 			print("Incorrect or no value for cfg field 0x%02X"%(CFG_FLAG_UNKN3))
 
@@ -355,8 +356,6 @@ def main():
 		sys.exit(-1)
 		
 	dev = ret[0]
-
-	#print("Device max_pack_size: %s" % (dev.bMaxPacketSize0))
 
 	ret, chip_id, chip_subid = __detect_ch5xx(dev)
 	if ret is None:
