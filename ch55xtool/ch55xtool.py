@@ -21,34 +21,34 @@ USB_MAX_TIMEOUT = 2000
 
 CH55X_IC_REF = {}
 CH55X_IC_REF[0x51] = {
-	'device_name': 'CH551',
-	'device_flash_size': 10240,
-	'device_dataflash_size': 128,
+	'name': 'CH551',
+	'flash_size': 10240,
+	'dataflash_size': 128,
 	'chip_id': 0x51}
 CH55X_IC_REF[0x52] = {
-	'device_name': 'CH552',
-	'device_flash_size': 16384,
-	'device_dataflash_size': 128,
+	'name': 'CH552',
+	'flash_size': 16384,
+	'dataflash_size': 128,
 	'chip_id': 0x52}
 CH55X_IC_REF[0x53] = {
-	'device_name': 'CH553',
-	'device_flash_size': 10240,
-	'device_dataflash_size': 128,
+	'name': 'CH553',
+	'flash_size': 10240,
+	'dataflash_size': 128,
 	'chip_id': 0x53}
 CH55X_IC_REF[0x54] = {
-	'device_name': 'CH554',
-	'device_flash_size': 14336,
-	'device_dataflash_size': 128,
+	'name': 'CH554',
+	'flash_size': 14336,
+	'dataflash_size': 128,
 	'chip_id': 0x54}
 CH55X_IC_REF[0x59] = {
-	'device_name': 'CH559',
-	'device_flash_size': 61440,
-	'device_dataflash_size': 128,
+	'name': 'CH559',
+	'flash_size': 61440,
+	'dataflash_size': 128,
 	'chip_id': 0x59}
 CH55X_IC_REF[0x68] = {
-	'device_name': 'CH568',
-	'device_flash_size': (128+64)*1024,
-	'device_dataflash_size': 32*1024,
+	'name': 'CH568',
+	'flash_size': (128+64)*1024,
+	'dataflash_size': 32*1024,
 	'chip_id': 0x68}
 # =============================================
 WCH_CMDS = 	{	"Detect":		b'\xA1',
@@ -302,7 +302,7 @@ def __flash_ops_write_verify(dev, key_xor_chksum, data, func="Write",max_packet_
 
 def __erase_chip_ch5xx(dev, chip_ref):
 	# We assume pages size is 1kb
-	erase_page_cnt = chip_ref['device_flash_size']>>10
+	erase_page_cnt = chip_ref['flash_size']>>10
 	cmd_pl = erase_page_cnt.to_bytes(4,'little')
 	ret, ret_pl = cmd_exec(dev,'FlashErase', cmd_pl)
 	if ret_pl[0] == 0:
@@ -363,7 +363,7 @@ def main():
 		print('Welcome to report this issue with a screen shot from the official CH5xx tool.')
 		sys.exit(-1)
 
-	print('Found %s with SubId:%d' % (chip_ref['device_name'], chip_subid))
+	print('Found %s with SubId:%d' % (chip_ref['name'], chip_subid))
 
 	ret, chip_cfg = __read_cfg_ch5xx(dev, CFG_FLAG_BOOTVER | CFG_FLAG_UID | CFG_FLAG_UNKNs, chip_id, chip_subid)
 	if ret is None:
@@ -390,9 +390,9 @@ def main():
 		file_data = list(open(flash_file, 'rb').read())
 		if flash_file.endswith('.hex') or flash_file.endswith('.ihx') or file_data[0]==58:
 			print("WARNING: This looks like a hex file. This tool only supports binary files.")
-		if len(file_data) > chip_ref['device_flash_size']:
+		if len(file_data) > chip_ref['flash_size']:
 			print('The binary is too large for the device.')
-			print('Binary size: %d, Flash size: %d' % (len(file_data),chip_ref['device_flash_size']))
+			print('Binary size: %d, Flash size: %d' % (len(file_data),chip_ref['flash_size']))
 			sys.exit(-1)
 			
 		if(float(ver_str)<2.3):
