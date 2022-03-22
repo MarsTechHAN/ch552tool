@@ -40,13 +40,13 @@ DETECT_PL_START = b'\x42\x10'
 DETECT_APP_ID_B = b'MCU ISP & WCH.CN'
 
 # Unknown bits work only all together like 0x07 !!
-CFG_FLAG_UNKN1   = 0x01
-CFG_FLAG_UNKN2   = 0x02
-CFG_FLAG_UNKN3   = 0x04
-CFG_FLAG_UNKNs   = CFG_FLAG_UNKN1 | CFG_FLAG_UNKN2 | CFG_FLAG_UNKN3
+FLAG_CFG1   = 0x01
+FLAG_CFG2   = 0x02
+FLAG_CFG3   = 0x04
+FLAG_CFGs   = FLAG_CFG1 | FLAG_CFG2 | FLAG_CFG3
 # Those bits work individualy 
-CFG_FLAG_BOOTVER = 0x08
-CFG_FLAG_UID     = 0x10
+FLAG_BOOTVER = 0x08
+FLAG_UID     = 0x10
 
 # =============================================
 def get_chip_parameters(chip_id,wcfg_path):
@@ -136,11 +136,11 @@ def __detect_ch5xx(dev):
 
 def __read_cfg_ch5xx(dev, req_fields, chip_id, chip_subid):
 	predict_ret_pl_len = 2 # 2 byte for fields
-	if(req_fields & CFG_FLAG_UNKN1):	predict_ret_pl_len += 4
-	if(req_fields & CFG_FLAG_UNKN2):	predict_ret_pl_len += 4
-	if(req_fields & CFG_FLAG_UNKN3):	predict_ret_pl_len += 4
-	if(req_fields & CFG_FLAG_BOOTVER):	predict_ret_pl_len += 4
-	if(req_fields & CFG_FLAG_UID):		predict_ret_pl_len += 8
+	if(req_fields & FLAG_CFG1):	predict_ret_pl_len += 4
+	if(req_fields & FLAG_CFG2):	predict_ret_pl_len += 4
+	if(req_fields & FLAG_CFG3):	predict_ret_pl_len += 4
+	if(req_fields & FLAG_BOOTVER):	predict_ret_pl_len += 4
+	if(req_fields & FLAG_UID):		predict_ret_pl_len += 8
 	
 	cmd_pl = req_fields.to_bytes(2,'little')
 	ret, ret_pl = cmd_exec(dev, 'ReadConfig', cmd_pl)
@@ -158,27 +158,27 @@ def __read_cfg_ch5xx(dev, req_fields, chip_id, chip_subid):
 		print("Reply fields do not match requested!")
 		
 	cfg_dict["Fields"] = reply_fields
-	if(reply_fields & CFG_FLAG_UNKN1):
-		cfg_dict[CFG_FLAG_UNKN1] = int.from_bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4],'little')
+	if(reply_fields & FLAG_CFG1):
+		cfg_dict[FLAG_CFG1] = int.from_bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4],'little')
 		reply_prc_bytes += 4
 		
-	if(reply_fields & CFG_FLAG_UNKN2):
-		cfg_dict[CFG_FLAG_UNKN2] = int.from_bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4],'little')
+	if(reply_fields & FLAG_CFG2):
+		cfg_dict[FLAG_CFG2] = int.from_bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4],'little')
 		reply_prc_bytes += 4
 		
-	if(reply_fields & CFG_FLAG_UNKN3):
-		cfg_dict[CFG_FLAG_UNKN3] = int.from_bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4],'little')
+	if(reply_fields & FLAG_CFG3):
+		cfg_dict[FLAG_CFG3] = int.from_bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4],'little')
 		reply_prc_bytes += 4
 
-	if(reply_fields & CFG_FLAG_BOOTVER):
-		cfg_dict[CFG_FLAG_BOOTVER] = bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4])
+	if(reply_fields & FLAG_BOOTVER):
+		cfg_dict[FLAG_BOOTVER] = bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4])
 		reply_prc_bytes += 4
 
-	if(reply_fields & CFG_FLAG_UID):
+	if(reply_fields & FLAG_UID):
 		if((chip_subid == 0x11) and (chip_id not in [0x55, 0x56, 0x57])):
-			cfg_dict[CFG_FLAG_UID] = bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4]) + b'\x00'*4
+			cfg_dict[FLAG_UID] = bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+4]) + b'\x00'*4
 		else:
-			cfg_dict[CFG_FLAG_UID] = bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+8])
+			cfg_dict[FLAG_UID] = bytes(ret_pl[reply_prc_bytes:reply_prc_bytes+8])
 		reply_prc_bytes += 8
 
 	return ret, cfg_dict
@@ -190,29 +190,29 @@ def __write_cfg_ch5xx(dev, cfg_dict):
 		return None, None
 	set_fields	= 0
 	cmd_pl 		= b''
-	if(cfg_fields & CFG_FLAG_UNKN1):
-		field_val = cfg_dict.get(CFG_FLAG_UNKN1)
+	if(cfg_fields & FLAG_CFG1):
+		field_val = cfg_dict.get(FLAG_CFG1)
 		if(field_val != None and len(field_val) == 4):
-			set_fields	|= CFG_FLAG_UNKN1
+			set_fields	|= FLAG_CFG1
 			cmd_pl 		+= field_val.to_bytes(4,'little')
 		else:
-			print("Incorrect or no value for cfg field 0x%02X"%(CFG_FLAG_UNKN1))
+			print("Incorrect or no value for cfg field 0x%02X"%(FLAG_CFG1))
 
-	if(cfg_fields & CFG_FLAG_UNKN2):
-		field_val = cfg_dict.get(CFG_FLAG_UNKN2)
+	if(cfg_fields & FLAG_CFG2):
+		field_val = cfg_dict.get(FLAG_CFG2)
 		if(field_val != None and len(field_val) == 4):
-			set_fields	|= CFG_FLAG_UNKN2
+			set_fields	|= FLAG_CFG2
 			cmd_pl 		+= field_val.to_bytes(4,'little')
 		else:
-			print("Incorrect or no value for cfg field 0x%02X"%(CFG_FLAG_UNKN2))
+			print("Incorrect or no value for cfg field 0x%02X"%(FLAG_CFG2))
 
-	if(cfg_fields & CFG_FLAG_UNKN3):
-		field_val = cfg_dict.get(CFG_FLAG_UNKN3)
+	if(cfg_fields & FLAG_CFG3):
+		field_val = cfg_dict.get(FLAG_CFG3)
 		if(field_val != None and len(field_val) == 4):
-			set_fields	|= CFG_FLAG_UNKN3
+			set_fields	|= FLAG_CFG3
 			cmd_pl 		+= field_val.to_bytes(4,'little')
 		else:
-			print("Incorrect or no value for cfg field 0x%02X"%(CFG_FLAG_UNKN3))
+			print("Incorrect or no value for cfg field 0x%02X"%(FLAG_CFG3))
 
 	if(set_fields > 0):
 		cmd_pl = set_fields.to_bytes(2,'little') + cmd_pl
@@ -375,6 +375,9 @@ def main():
 		'--verify_data', type=str, action='store', nargs='?', const='', default=None,
 		help="Verify data flash.")
 
+	parser.add_argument(
+		'-p', '--print_chip_cfg', action='store_true', default=False,
+		help="Read and print chip configuration bits 3 x 32bit values.")
 
 	parser.add_argument(
 		'-r', '--reset_at_end', action='store_true', default=False,
@@ -409,13 +412,13 @@ def main():
 
 	print('Found %s with SubId:%d' % (chip_ref['name'], chip_subid))
 
-	ret, chip_cfg = __read_cfg_ch5xx(dev, CFG_FLAG_BOOTVER | CFG_FLAG_UID | CFG_FLAG_UNKNs, chip_id, chip_subid)
+	ret, chip_cfg = __read_cfg_ch5xx(dev, FLAG_BOOTVER | FLAG_UID, chip_id, chip_subid)
 	if ret is None:
-		print('Cannot read chip configuration!')
+		print('Cannot read chip bootloader version/uniqe ID.')
 		sys.exit(-1)
 	else:
-		bootver = chip_cfg.get(CFG_FLAG_BOOTVER)
-		uid		= chip_cfg.get(CFG_FLAG_UID)
+		bootver = chip_cfg.get(FLAG_BOOTVER)
+		uid		= chip_cfg.get(FLAG_UID)
 		if( bootver is None or uid is None):
 			print('Cannot read chip bootloader version or uniqe ID.')
 			sys.exit(-1)
@@ -430,6 +433,20 @@ def main():
 		sys.exit('Bootloader version not supported.')
 
 	chk_sum = __chip_uid_chk_sum(chip_subid, uid)
+
+	if(args.print_chip_cfg):
+		ret, chip_cfg = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
+		if ret is None:
+			print('Cannot read chip configs variables.')
+			sys.exit(-1)
+		else:
+			cfg1 = chip_cfg.get(FLAG_CFG1)
+			cfg2 = chip_cfg.get(FLAG_CFG2)
+			cfg3 = chip_cfg.get(FLAG_CFG3)
+			if( cfg1 is None or cfg2 is None or cfg3 is None):
+				print('Cannot find chip configurations after read.')
+				sys.exit(-1)
+			print("Chip configs   0x%08X   0x%08X   0x%08X" % (cfg1, cfg2, cfg3) )
 
 	if(args.read_dataflash !=''):
 		ret, ret_data = __data_flash_read(dev, chip_ref['dataflash_size'])

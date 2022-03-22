@@ -13,6 +13,7 @@ Usage
 * __-c/--erase\_dataflash__  Erase the whole data flash.
 * __--verify\_data__ [filename] Verify data flash contend with given file, if filename ommited verifying with written data. No verifying perormed without this flag.
 * __-g/--read\_dataflash__ Read content of data flash to file.
+* __-p/--print\_chip\_cfg__ Read and print chip configuration bits 3 x 32 bit values.
 
 
 ```bash
