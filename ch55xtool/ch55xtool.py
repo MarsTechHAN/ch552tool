@@ -10,6 +10,7 @@ import random
 import usb.core
 import usb.util
 
+import configparser
 # ======= Some C-like static constants =======
 DFU_ID_VENDOR	= 0x4348
 DFU_ID_PRODUCT	= 0x55e0
@@ -18,22 +19,6 @@ EP_OUT_ADDR	= 0x02
 EP_IN_ADDR	= 0x82
 
 USB_MAX_TIMEOUT = 2000
-
-CH55X_IC_REF = {
-	0x3f:{'name':'CH32V103', 'flash_size': 64*1024, 'dataflash_size': 0, 'chip_id': 0x3f, 'erase_required_pages':True},
-	0x49:{'name':'CH549', 'flash_size': 60*1024, 'dataflash_size': 1024, 'chip_id': 0x49, 'erase_required_pages':False},
-	0x51:{'name':'CH551', 'flash_size': 10240, 'dataflash_size': 128, 'chip_id': 0x51, 'erase_required_pages':False},
-	0x52:{'name':'CH552', 'flash_size': 16384, 'dataflash_size': 128, 'chip_id': 0x52, 'erase_required_pages':False},
-	0x53:{'name':'CH553', 'flash_size': 10240, 'dataflash_size': 128, 'chip_id': 0x53, 'erase_required_pages':False},
-	0x54:{'name':'CH554', 'flash_size': 14336, 'dataflash_size': 128, 'chip_id': 0x54, 'erase_required_pages':False},
-	0x59:{'name':'CH559', 'flash_size': 61440, 'dataflash_size': 128, 'chip_id': 0x59, 'erase_required_pages':False},
-	0x68:{'name':'CH568', 'flash_size': 192*1024, 'dataflash_size': 32*1024, 'chip_id': 0x68, 'erase_required_pages':False},
-	0x70:{'name':'CH32V307', 'flash_size': 256*1024, 'dataflash_size': 128, 'chip_id': 0x70, 'erase_required_pages':False},
-	0x71:{'name':'CH571', 'flash_size': 192*1024, 'dataflash_size': 0, 'chip_id': 0x71, 'erase_required_pages':True},
-	0x73:{'name':'CH573', 'flash_size': 448*1024, 'dataflash_size': 0, 'chip_id': 0x73, 'erase_required_pages':True},
-	0x79:{'name':'CH579', 'flash_size': 256*1024, 'dataflash_size': 0, 'chip_id': 0x79, 'erase_required_pages':True},
-	0x82:{'name':'CH582', 'flash_size': 448*1024, 'dataflash_size': 0, 'chip_id': 0x82, 'erase_required_pages':True},
-}
 
 # =============================================
 WCH_CMDS = 	{	"Detect":		b'\xA1',
@@ -64,6 +49,23 @@ CFG_FLAG_BOOTVER = 0x08
 CFG_FLAG_UID     = 0x10
 
 # =============================================
+def get_chip_parameters(chip_id,wcfg_path):
+	chip_params = {}
+	params_ini = configparser.ConfigParser()
+	params_ini.optionxform = lambda option: option
+	params_ini.read(wcfg_path+'/typeall.wcfg')
+	for section in params_ini.sections():
+		if(params_ini.has_option(section,'chipid')):
+			if(params_ini.getint(section,'chipid') == chip_id):
+				chip_params.update({'name':section})
+				chip_params.update({'chip_id':chip_id})
+				chip_params.update({'flash_size':params_ini.getint(section,'MaxFlashSize')})
+				chip_params.update({'dataflash_size':params_ini.getint(section,'MaxEepromSize')})
+				chip_params.update({'McuType':params_ini.getint(section,'McuType')})
+				break
+	else:
+		chip_params = None
+	return chip_params
 
 def cmd_send(dev, cmd_bin, payload):
 	pl_len = len(payload)
@@ -344,6 +346,9 @@ def __end_flash_ch5xx(dev, restart_after = False):
 		return cmd_exec(dev, "End", cmd_pl)
 
 def main():
+	pathname = os.path.dirname(sys.argv[0])
+	fullpath = os.path.abspath(pathname)
+
 	parser = argparse.ArgumentParser(
 		description="USBISP Tool For WinChipHead CH55x/CH56x .")
 
@@ -396,7 +401,7 @@ def main():
 		print('Welcome to report this issue with a screen shot from the official CH5xx tool.')
 		sys.exit(-1)
 	
-	chip_ref = CH55X_IC_REF.get(chip_id)
+	chip_ref = get_chip_parameters(chip_id, fullpath)
 	if chip_ref is None:
 		print('Chip ID: %x is not known = not supported' % chip_id)
 		print('Welcome to report this issue with a screen shot from the official CH5xx tool.')
