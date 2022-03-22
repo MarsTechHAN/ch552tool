@@ -18,7 +18,7 @@ DFU_ID_PRODUCT	= 0x55e0
 EP_OUT_ADDR	= 0x02
 EP_IN_ADDR	= 0x82
 
-USB_MAX_TIMEOUT = 2000
+USB_MAX_TIMEOUT = 5000
 
 # =============================================
 WCH_CMDS = 	{	"Detect":		b'\xA1',
