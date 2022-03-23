@@ -256,7 +256,7 @@ def __send_key_base(dev, key_base):
 
 def __flash_ops_write_verify(dev, key_xor_chksum, data, func="FlashWrite"):
 	if(func not in [ 'FlashWrite' , 'FlashVerify', 'DataWrite'] ):
-		return None
+		return False, -1
 	data_length = len(data)
 	curr_addr = 0
 	cfg = dev.get_active_configuration()
@@ -286,12 +286,13 @@ def __flash_ops_write_verify(dev, key_xor_chksum, data, func="FlashWrite"):
 		
 		ret, ret_pl = cmd_exec(dev, func, cmd_pl)
 		if( ret == None or ret_pl[0] != 0x00):
-			return None
+			return False, curr_addr
+			
 		curr_addr = curr_addr + pkt_length
 	if(curr_addr > data_length):
-		return data_length
+		return True, data_length
 	else:
-		return curr_addr
+		return True, curr_addr
 
 def __data_flash_read(dev, data_flash_size):
 	curr_addr = 0
@@ -399,6 +400,8 @@ def main():
 
 	args = parser.parse_args()
 
+	verb = args.verbose
+	addr = 0
 	ret = __get_dfu_device()
 	if ret[0] is None:
 		print('Failed to get device, please check your libusb installation.')
@@ -502,11 +505,14 @@ def main():
 			if ret is None:
 				sys.exit('Failed to write key for DataFlash write to CH5xx.')
 			print('DataFlashing chip.',end='')
-			ret = __flash_ops_write_verify(dev, enc_key, dataflash_write_data, func="DataWrite")
-			if ret is None:
-				sys.exit('Failed.')
+			ret, addr = __flash_ops_write_verify(dev, enc_key, dataflash_write_data, func="DataWrite")
+			if(ret):
+				if(verb):
+					print(' Done. Amount: %d ' % (addr) )
+				else:
+					print(' Done. ')
 			else:
-				print(' Done.')
+				sys.exit(' Failed. Address %d' %(addr) )
 		else:
 			print('Nothing to write to program flash.')
 
@@ -532,13 +538,21 @@ def main():
 			print('Verifying Dataflash.',end='')
 			ret, ret_data = __data_flash_read(dev, len(dataflash_verify_data))
 			if ret is None:
-				sys.exit(' Data read failed.')
+				sys.exit(' Data read failed. Read amount %d.' %(len(ret_data)))
+			elif(len(ret_data) != len(dataflash_verify_data)):
+				sys.exit(' Failed. Sizes differ: received %d to compare %d' %(len(ret_data), len(dataflash_verify_data)) )
 			elif(ret_data != dataflash_verify_data):
-				print(ret_data)
-				print(dataflash_verify_data)
-				sys.exit(' Compare failed.')
+				print(' Compare failed ', end='')
+				for i in range(len(ret_data)):
+					if(ret_data[i] != dataflash_verify_data[i]):
+						print('at address %d.' %(i))
+						break
+				sys.exit(-1)
 			else:
-				print(' Done.')
+				if(verb):
+					print(' Done. Amount: %d ' % (len(ret_data)) )
+				else:
+					print(' Done. ')
 		else:
 			print('Nothing to verifying with data flash.')
 
@@ -569,11 +583,14 @@ def main():
 			if ret is None:
 				sys.exit('Failed to write key for flash write to CH5xx.')
 			print('Flashing chip.',end='')
-			ret = __flash_ops_write_verify(dev, enc_key, flash_write_data, func="FlashWrite")
-			if ret is None:
-				sys.exit('Failed to flash firmware of CH55x.')
+			ret, addr = __flash_ops_write_verify(dev, enc_key, flash_write_data, func="FlashWrite")
+			if(ret):
+				if(verb):
+					print(' Done. Amount: %d ' % (addr) )
+				else:
+					print(' Done. ')
 			else:
-				print(' Done.')
+				sys.exit(' Failed. Address %d' %(addr) )
 		else:
 			print('Nothing to write to program flash.')
 
@@ -600,11 +617,14 @@ def main():
 			if ret is None:
 				sys.exit('Failed to write key for flash verify to CH5xx.')
 			print('Verifying flash.',end='')
-			ret = __flash_ops_write_verify(dev, enc_key, flash_verify_data, func="FlashVerify")
-			if ret is None:
-				sys.exit(' Failed to verify firmware of CH55x.')
+			ret, addr = __flash_ops_write_verify(dev, enc_key, flash_verify_data, func="FlashVerify")
+			if(ret):
+				if(verb):
+					print(' Done. Amount: %d ' % (addr) )
+				else:
+					print(' Done. ')
 			else:
-				print(' Done.')
+				sys.exit(' Failed. Address %d' %(addr) )
 		else:
 			print('Nothing to verifying with program flash.')
 
