@@ -329,6 +329,8 @@ def __erase_program_flash_ch5xx(dev, chip_ref):
 def __erase_data_flash_ch5xx(dev, chip_ref):
 	# We assume pages size is 1kb
 	erase_page_cnt = chip_ref['dataflash_size']>>10
+	if(erase_page_cnt == 0):
+		erase_page_cnt = 1
 	cmd_pl = int(0).to_bytes(4,'little') + erase_page_cnt.to_bytes(1,'little')
 	ret, ret_pl = cmd_exec(dev,'DataErase', cmd_pl)
 	if ret_pl[0] == 0:
