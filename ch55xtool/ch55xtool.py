@@ -32,6 +32,8 @@ WCH_CMDS = 	{	"Detect":		b'\xA1',
 				"DataErase":	b'\xA9',
 				"DataWrite":	b'\xAA',
 				"DataRead":		b'\xAB',
+				"ReadOTP":		b'\xC4',
+				"WriteOTP":		b'\xC3',
 			}
 
 # Meaning of those two values not yet clear :(
@@ -382,6 +384,10 @@ def main():
 		help="Read and print chip configuration bits 3 x 32bit values.")
 
 	parser.add_argument(
+		'--print_otp', type=int,
+		help="Read and print OTP.")
+
+	parser.add_argument(
 		'-r', '--reset_at_end', action='store_true', default=False,
 		help="Reset as the end of operations.")
 	parser.add_argument(
@@ -449,6 +455,19 @@ def main():
 				print('Cannot find chip configurations after read.')
 				sys.exit(-1)
 			print("Chip configs   0x%08X   0x%08X   0x%08X" % (cfg1, cfg2, cfg3) )
+
+	if(args.print_otp is not None):
+		cmd_pl = args.print_otp.to_bytes(1,"little")
+		print("Reading OTP",end="")
+		ret, chip_otp = cmd_exec(dev, "ReadOTP", cmd_pl)
+		if(ret is None):
+			print('Cannot read chip OTP.')
+			sys.exit(-1)
+		else:
+			if(chip_otp[0] == 0 and chip_otp[1] == 0 and len(chip_otp)>2 ) :
+				print(":", list(chip_otp[2:]))
+			else:
+				print(" Respond failure:",list(chip_otp) )
 
 	if(args.read_dataflash !=''):
 		ret, ret_data = __data_flash_read(dev, chip_ref['dataflash_size'])
