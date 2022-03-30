@@ -628,6 +628,9 @@ def main():
 		else:
 			print('Nothing to verifying with program flash.')
 
+	# To prevent "detection break"
+	_,_ = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
+
 	print('Finalize communication.',end="")
 	ret, ret_pl = __end_flash_ch5xx(dev, restart_after = args.reset_at_end)
 	if(ret is True):
