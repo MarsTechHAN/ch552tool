@@ -19,7 +19,7 @@ CFGs={
 		'cfg3_val': {
 			'need_value': True,
 			FLAG_CFG3 :{'mask':0xf000 },
-			'help':'Direct define value for CFG3 in mask 0x0000F00'
+			'help':'Direct define value for CFG3 in mask 0x0000F000'
 		},
 		'En_RST_RESET': {
 			FLAG_CFG3 :{'mask': 1<<12 , 'value': 1<<12 },

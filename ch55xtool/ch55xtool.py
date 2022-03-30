@@ -584,6 +584,27 @@ def main():
 
 	chk_sum = __chip_uid_chk_sum(chip_subid, uid)
 
+	if(args.cfgs_options_list != None):
+		if(args.cfgs_options_list != ''):
+			print("Printing options for given name not supported")
+		else:
+			cfgs_opt_dict = chip_ref.get('cfgs_bits')
+			if(cfgs_opt_dict):
+				for opt_name in cfgs_opt_dict.keys():
+					if(cfgs_opt_dict[opt_name].get('need_value')):
+						val_str = '=xxx'
+					else:
+						val_str = ''
+					if(opt_name in ['_reserved']):
+						continue
+					opt_help = cfgs_opt_dict[opt_name].get('help')
+					if(opt_help):
+						print("Option '%s'\t - %s" % (opt_name+val_str, opt_help))
+					else:
+						print("Option '%s'\t - no description" % (opt_name+val_str))
+			else:
+				print("No known options for found chip.")
+
 	if(args.cfgs_options):
 		if(args.cfgs_options_force_action):
 			print(" Configuration options action is high RISK, you take action on YOUR OWN RISK !!")
@@ -610,7 +631,6 @@ def main():
 		if ret is None:
 			print('Cannot read chip configs variables.')
 			sys.exit(-1)
-
 
 	if(args.print_chip_cfg):
 		ret, chip_cfg = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
@@ -681,7 +701,6 @@ def main():
 			print('All give configuration options already set, nothing to realy write.')
 		# To prevent "detection break"
 		_, _, _ = __detect_ch5xx(dev)
-
 
 	if(args.read_dataflash !=''):
 		ret, ret_data = __data_flash_read(dev, chip_ref['dataflash_size'])
