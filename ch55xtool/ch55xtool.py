@@ -51,10 +51,10 @@ FLAG_BOOTVER = 0x08
 FLAG_UID     = 0x10
 
 # =============================================
-def get_chip_parameters(chip_id,wcfg_path):
+def get_chip_parameters(chip_id,wcfg_path, user_param_file='' ):
 	chip_params = {}
 	params_ini = configparser.ConfigParser()
-	params_ini.optionxform = lambda option: option
+	#params_ini.optionxform = lambda option: option
 	params_ini.read(wcfg_path+'/typeall.wcfg')
 	for section in params_ini.sections():
 		if(params_ini.has_option(section,'chipid')):
@@ -65,8 +65,50 @@ def get_chip_parameters(chip_id,wcfg_path):
 				chip_params.update({'dataflash_size':params_ini.getint(section,'MaxEepromSize')})
 				chip_params.update({'McuType':params_ini.getint(section,'McuType')})
 				break
-	else:
-		chip_params = None
+
+	params_ini_ext = configparser.ConfigParser()
+	#params_ini_ext.optionxform = lambda option: option
+	params_ini_ext.read(wcfg_path+'/extended.wcfg')
+	for section in params_ini_ext.sections():
+		if(params_ini_ext.has_option(section,'chipid')):
+			if(params_ini_ext.getint(section,'chipid') == chip_id):
+				chip_params.update({'name':section})
+				chip_params.update({'chip_id':chip_id})
+				chip_params.update({'flash_size':params_ini_ext.getint(section,'MaxFlashSize')})
+				chip_params.update({'dataflash_size':params_ini_ext.getint(section,'MaxEepromSize')})
+				if(params_ini_ext.has_option(section,'McuType')):
+					chip_params.update({'McuType':params_ini_ext.getint(section,'McuType')})
+				break
+
+	# Check we found any and all mandatory params exist
+	if(chip_params.get('chip_id') == None or chip_params.get('name') == None):
+		return None
+	missing_defs = []
+	if( chip_params.get('flash_size')     == None): missing_defs.append('MaxFlashSize')
+	if( chip_params.get('dataflash_size') == None): missing_defs.append('MaxEepromSize')
+	if(missing_defs):
+		print('Chip configuration definitions shortage, mandatory fiels',missing_defs)
+		return None
+
+	section = chip_params.get('name')
+	if(params_ini_ext.has_section(section)):
+		if(params_ini_ext.has_option(section,'Tested')):
+			chip_params.update({'tested':params_ini_ext.getboolean(section,'Tested')})
+		if(params_ini_ext.has_option(section,'CFGs')):
+			chip_params.update({'cfgs_bits':eval(params_ini_ext.get(section,'CFGs'))})
+
+	if(user_param_file):
+		params_ini_usr = configparser.ConfigParser()
+		#params_ini_usr.optionxform = lambda option: option
+		params_ini_usr.read(user_param_file)
+		if(params_ini_usr.has_section(section)):
+			if(params_ini_usr.has_option(section,'Tested')):
+				chip_params.update({'tested':params_ini_usr.getboolean(section,'Tested')})
+			if(params_ini_usr.has_option(section,'CFGs')):
+				if(chip_params.get('cfgs_bits') == None):
+					chip_params.update({'cfgs_bits':eval(params_ini_usr.get(section,'CFGs'))})
+				else:
+					chip_params['cfgs_bits'].update(eval(params_ini_usr.get(section,'CFGs')))
 	return chip_params
 
 def cmd_send(dev, cmd_bin, payload):
@@ -389,6 +431,18 @@ def main():
 		help="Read and print OTP.")
 
 	parser.add_argument(
+		'-o', '--cfgs_options', action='append', nargs='+',
+		help="Apply configuration options before operations.")
+
+	parser.add_argument(
+		'-a', '--cfgs_options_after', action='append', nargs='+',
+		help="Apply configuration options after operations.")
+
+	parser.add_argument(
+		'-u', '--user_def', type=str, default='',
+		help="Use additional user chip definition INI file.")
+
+	parser.add_argument(
 		'-r', '--reset_at_end', action='store_true', default=False,
 		help="Reset as the end of operations.")
 	parser.add_argument(
@@ -414,8 +468,12 @@ def main():
 		print('Unable to detect CH5xx.')
 		print('Welcome to report this issue with a screen shot from the official CH5xx tool.')
 		sys.exit(-1)
-	
-	chip_ref = get_chip_parameters(chip_id, fullpath)
+
+	if(args.user_def):
+		chip_ref = get_chip_parameters(chip_id, fullpath, args.user_def)
+	else:
+		chip_ref = get_chip_parameters(chip_id, fullpath)
+		
 	if chip_ref is None:
 		print('Chip ID: %x is not known = not supported' % chip_id)
 		print('Welcome to report this issue with a screen shot from the official CH5xx tool.')
@@ -444,6 +502,33 @@ def main():
 		sys.exit('Bootloader version not supported.')
 
 	chk_sum = __chip_uid_chk_sum(chip_subid, uid)
+
+	if(args.cfgs_options):
+		opt_list = []
+		for opt_l in args.cfgs_options:
+			for opt in opt_l:
+				for spl_opt in opt.split(','):
+					opt_list.append(spl_opt.split('='))
+		# Check all options exist
+		opt_errors = False
+		if(chip_ref.get('cfgs_bits')):
+			for opt in opt_list:
+				if(chip_ref['cfgs_bits'].get(opt[0]) == None):
+					print("Chip %s do not have option: %s" % (chip_ref['name'], opt[0]) )
+					opt_errors = True
+				elif(chip_ref['cfgs_bits'][opt[0]].get('need_value') and len(opt)<2 ):
+					print("Chip %s option: %s need value be given by %s=value" % (chip_ref['name'], opt[0], opt[0]) )
+					opt_errors = True
+				elif(len(opt)>1 and not chip_ref['cfgs_bits'][opt[0]].get('need_value') ):
+					print("Chip %s option: %s do not accept value but given =%d" % (chip_ref['name'], opt[0], eval(opt[1]) ) )
+					opt_errors = True
+				else:
+					if(len(opt)>1):
+						print("Chip %s Good option: %s value %d" % (chip_ref['name'], opt[0], eval(opt[1]) ) )
+					else:
+						print("Chip %s Good option: %s" % (chip_ref['name'], opt[0]) )
+		else:
+			print("Chip %s do not have any config options to use." % (chip_ref['name']))
 
 	if(args.print_chip_cfg):
 		ret, chip_cfg = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
