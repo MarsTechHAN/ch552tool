@@ -617,7 +617,7 @@ def main():
 			sys.exit(-1)
 
 	if(args.cfgs_options_after):
-		if(args.cfgs_options_force_action == None):
+		if(args.cfgs_options_force_action):
 			print(" Configuration options action is high RISK, you take action on YOUR OWN RISK !!")
 		else:
 			print(" Configuration options work in simulation mode. No real action (updating/writing).\r\n To force real action at YOUR OWN RISK use '--cfgs_options_force_action'!!")
@@ -698,7 +698,7 @@ def main():
 			# To repeat original SW
 			_, _ = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
 		elif(not cfg_changed):
-			print('All give configuration options already set, nothing to realy write.')
+			print('All given configuration options already set, nothing to realy write.')
 		# To prevent "detection break"
 		_, _, _ = __detect_ch5xx(dev)
 
@@ -857,6 +857,47 @@ def main():
 				sys.exit(' Failed. Address %d' %(addr) )
 		else:
 			print('Nothing to verifying with program flash.')
+
+	if(args.cfgs_options_after):
+		ret, chip_cfg = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
+		if(ret is None):
+			print('Cannot read chip configs variables.')
+			sys.exit(-1)
+		if( chip_cfg.get(FLAG_CFG1) is None or
+			chip_cfg.get(FLAG_CFG2) is None or
+			chip_cfg.get(FLAG_CFG3) is None
+			):
+			print('Cannot find chip configurations after read.')
+			sys.exit(-1)
+
+		cfg_changed, new_cfg = __apply_option_list(opt_list_after,chip_ref,chip_cfg)
+
+		if(verb):
+			cfg1 = chip_cfg.get(FLAG_CFG1)
+			cfg2 = chip_cfg.get(FLAG_CFG2)
+			cfg3 = chip_cfg.get(FLAG_CFG3)
+			
+			ncfg1 = new_cfg.get(FLAG_CFG1)
+			ncfg2 = new_cfg.get(FLAG_CFG2)
+			ncfg3 = new_cfg.get(FLAG_CFG3)
+			print("Chip configs before apply 0x%08X   0x%08X   0x%08X" % (cfg1, cfg2, cfg3) )
+			print("Chip configs after apply  0x%08X   0x%08X   0x%08X" % (ncfg1, ncfg2, ncfg3) )
+
+		if(args.cfgs_options_force_action and cfg_changed):
+			ret, ret_pl = __write_cfg_ch5xx(dev, new_cfg)
+			if(ret is None):
+				print('Cannot write chip configs variables.')
+				sys.exit(-1)
+			elif(ret_pl[0]):
+				print('Error at writing chip configs variables. Resp: ', ret_pl[:])
+				sys.exit(-1)
+			# To repeat original SW
+			_, _ = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
+		elif(not cfg_changed):
+			print('All given configuration options already set, nothing to realy write.')
+
+		# To prevent "detection break"
+		_, _, _ = __detect_ch5xx(dev)
 
 	print('Finalize communication.',end="")
 	ret, ret_pl = __end_flash_ch5xx(dev, restart_after = args.reset_at_end)
