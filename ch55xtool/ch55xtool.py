@@ -228,15 +228,15 @@ def __read_cfg_ch5xx(dev, req_fields, chip_id, chip_subid):
 	return ret, cfg_dict
 
 def __write_cfg_ch5xx(dev, cfg_dict):
-	cfg_fileds = cfg_dict.get("Fields")
-	if(cfg_fileds is None):
+	cfg_fields = cfg_dict.get("Fields")
+	if(cfg_fields is None):
 		print("Not defined fields to set configuration.")
 		return None, None
 	set_fields	= 0
 	cmd_pl 		= b''
 	if(cfg_fields & FLAG_CFG1):
 		field_val = cfg_dict.get(FLAG_CFG1)
-		if(field_val != None and len(field_val) == 4):
+		if(field_val != None):
 			set_fields	|= FLAG_CFG1
 			cmd_pl 		+= field_val.to_bytes(4,'little')
 		else:
@@ -244,7 +244,7 @@ def __write_cfg_ch5xx(dev, cfg_dict):
 
 	if(cfg_fields & FLAG_CFG2):
 		field_val = cfg_dict.get(FLAG_CFG2)
-		if(field_val != None and len(field_val) == 4):
+		if(field_val != None):
 			set_fields	|= FLAG_CFG2
 			cmd_pl 		+= field_val.to_bytes(4,'little')
 		else:
@@ -252,7 +252,7 @@ def __write_cfg_ch5xx(dev, cfg_dict):
 
 	if(cfg_fields & FLAG_CFG3):
 		field_val = cfg_dict.get(FLAG_CFG3)
-		if(field_val != None and len(field_val) == 4):
+		if(field_val != None):
 			set_fields	|= FLAG_CFG3
 			cmd_pl 		+= field_val.to_bytes(4,'little')
 		else:
@@ -261,7 +261,7 @@ def __write_cfg_ch5xx(dev, cfg_dict):
 	if(set_fields > 0):
 		cmd_pl = set_fields.to_bytes(2,'little') + cmd_pl
 		ret, ret_pl = cmd_exec(dev, 'WriteConfig', cmd_pl)
-		return ret, cfg_dict
+		return ret, ret_pl
 	else:
 		print("No setable chip fields in given config.")
 		return None, None
@@ -392,6 +392,79 @@ def __end_flash_ch5xx(dev, restart_after = False):
 	else:
 		return cmd_exec(dev, "End", cmd_pl)
 
+def __get_list_from_given_options(options):
+	opt_list = []
+	for opt_l in options:
+		for opt in opt_l:
+			for spl_opt in opt.split(','):
+				opt_list.append(spl_opt.split('='))
+	return opt_list
+
+def __check_option_list(opt_list, chip_ref, verbose=False):
+		opt_good = True
+		if(chip_ref.get('cfgs_bits')):
+			for opt in opt_list:
+				if(chip_ref['cfgs_bits'].get(opt[0]) == None):
+					print("Chip %s do not have option: %s" % (chip_ref['name'], opt[0]) )
+					opt_good = False
+				elif(chip_ref['cfgs_bits'][opt[0]].get('need_value') and len(opt)<2 ):
+					print("Chip %s option: %s need value be given by %s=value" % (chip_ref['name'], opt[0], opt[0]) )
+					opt_good = False
+				elif(len(opt)>1 and not chip_ref['cfgs_bits'][opt[0]].get('need_value') ):
+					print("Chip %s option: %s do not accept value but given =%d" % (chip_ref['name'], opt[0], eval(opt[1]) ) )
+					opt_good = False
+				else:
+					cfg_opt_dict = chip_ref['cfgs_bits'].get(opt[0])
+					if(len(opt)>1):
+						value = eval(opt[1])
+						for cfg_flag in [FLAG_CFG1 , FLAG_CFG2, FLAG_CFG3]:
+							cfg_flag_dict = chip_ref['cfgs_bits'][opt[0]].get(cfg_flag)
+							if(cfg_flag_dict):
+								cfg_flag_v = cfg_flag
+								break
+						if(cfg_flag_dict):
+							#if(cfg_flag_dict.get('mask')):
+							val_mask = chip_ref['cfgs_bits'][opt[0]][cfg_flag].get('mask')
+							if(value & val_mask != value):
+								print("Chip %s option: %s given value 0x%08x out of mask 0x%08x" % (chip_ref['name'], opt[0], value , val_mask) ) 
+								opt_good = False
+							elif(verbose):
+								print("Chip %s Good option: %s value %d" % (chip_ref['name'], opt[0], eval(opt[1]) ) )
+					else:
+						if(verbose):
+							print("Chip %s Good option: %s" % (chip_ref['name'], opt[0]) )
+				if(not opt_good and not verbose):
+					break
+		else:
+			print("Chip %s do not have any config options to use." % (chip_ref['name']))
+			opt_good = False
+		return opt_good
+
+def __apply_option_list(opt_list, chip_ref, chip_cfgs, verbose=False):
+	cfgs_changed = False
+	result_d = {}
+	result_d.update(chip_cfgs.copy())
+	for opt in [['_reserved']] + opt_list:
+		cfg_opt_dict = chip_ref['cfgs_bits'].get(opt[0])
+		for cfg_flag in [FLAG_CFG1 , FLAG_CFG2, FLAG_CFG3]:
+			cfg_flag_dict = cfg_opt_dict.get(cfg_flag)
+			if(cfg_flag_dict and (chip_cfgs['Fields'] & cfg_flag == cfg_flag) ):
+				if(cfg_opt_dict.get('need_value')):
+					value = eval(opt[1])
+				else:
+					value = cfg_flag_dict.get('value')
+				new_val = ( result_d[cfg_flag] & ( 0xffffffff ^ cfg_flag_dict.get('mask') ) ) | value 
+				if(	opt[0] not in ['_reserved']):
+					if(	result_d[cfg_flag] != new_val ):
+						cfgs_changed = True
+						print("Config get changed")
+					else:
+						print("Configuration option %s already in chip configs." % (opt[0]))
+				result_d.update( { cfg_flag : new_val }  )
+			if(cfg_opt_dict.get('need_value')):
+				break
+	return cfgs_changed, result_d
+
 def main():
 	pathname = os.path.dirname(sys.argv[0])
 	fullpath = os.path.abspath(pathname)
@@ -433,10 +506,15 @@ def main():
 	parser.add_argument(
 		'-o', '--cfgs_options', action='append', nargs='+',
 		help="Apply configuration options before operations.")
-
 	parser.add_argument(
 		'-a', '--cfgs_options_after', action='append', nargs='+',
 		help="Apply configuration options after operations.")
+	parser.add_argument(
+		'--cfgs_options_force_action', action='store_true', default=False,
+		help="!Warning! Use on own risk, configuration options enable action (writing).")
+	parser.add_argument(
+		'--cfgs_options_list', type=str, action='store', nargs='?', const='', default=None,
+		help="List configuration options for detected chip or optional given chip name.")
 
 	parser.add_argument(
 		'-u', '--user_def', type=str, default='',
@@ -492,6 +570,9 @@ def main():
 			print('Cannot read chip bootloader version or uniqe ID.')
 			sys.exit(-1)
 
+	# To prevent "detection break"
+	_, _, _ = __detect_ch5xx(dev)
+
 	ver_str = '%d%d.%d%d' % (bootver[0], bootver[1], bootver[2], bootver[3])
 	print('BTVER:%s' % ver_str)
 
@@ -504,31 +585,32 @@ def main():
 	chk_sum = __chip_uid_chk_sum(chip_subid, uid)
 
 	if(args.cfgs_options):
-		opt_list = []
-		for opt_l in args.cfgs_options:
-			for opt in opt_l:
-				for spl_opt in opt.split(','):
-					opt_list.append(spl_opt.split('='))
-		# Check all options exist
-		opt_errors = False
-		if(chip_ref.get('cfgs_bits')):
-			for opt in opt_list:
-				if(chip_ref['cfgs_bits'].get(opt[0]) == None):
-					print("Chip %s do not have option: %s" % (chip_ref['name'], opt[0]) )
-					opt_errors = True
-				elif(chip_ref['cfgs_bits'][opt[0]].get('need_value') and len(opt)<2 ):
-					print("Chip %s option: %s need value be given by %s=value" % (chip_ref['name'], opt[0], opt[0]) )
-					opt_errors = True
-				elif(len(opt)>1 and not chip_ref['cfgs_bits'][opt[0]].get('need_value') ):
-					print("Chip %s option: %s do not accept value but given =%d" % (chip_ref['name'], opt[0], eval(opt[1]) ) )
-					opt_errors = True
-				else:
-					if(len(opt)>1):
-						print("Chip %s Good option: %s value %d" % (chip_ref['name'], opt[0], eval(opt[1]) ) )
-					else:
-						print("Chip %s Good option: %s" % (chip_ref['name'], opt[0]) )
+		if(args.cfgs_options_force_action):
+			print(" Configuration options action is high RISK, you take action on YOUR OWN RISK !!")
 		else:
-			print("Chip %s do not have any config options to use." % (chip_ref['name']))
+			print(" Configuration options work in simulation mode. No real action (updating/writing).\r\n To force real action at YOUR OWN RISK use '--cfgs_options_force_action'!!")
+		opt_list = __get_list_from_given_options(args.cfgs_options)
+		# Check all options exist and meet defines
+		if(not __check_option_list(opt_list,chip_ref, verb)):
+			print('Config options error.')
+			sys.exit(-1)
+
+	if(args.cfgs_options_after):
+		if(args.cfgs_options_force_action == None):
+			print(" Configuration options action is high RISK, you take action on YOUR OWN RISK !!")
+		else:
+			print(" Configuration options work in simulation mode. No real action (updating/writing).\r\n To force real action at YOUR OWN RISK use '--cfgs_options_force_action'!!")
+
+		opt_list_after = __get_list_from_given_options(args.cfgs_options_after)
+		# Check all options exist and meet defines
+		if(not __check_option_list(opt_list_after,chip_ref, verb)):
+			print('Config after options error.')
+			sys.exit(-1)
+		ret, chip_cfg = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
+		if ret is None:
+			print('Cannot read chip configs variables.')
+			sys.exit(-1)
+
 
 	if(args.print_chip_cfg):
 		ret, chip_cfg = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
@@ -543,6 +625,9 @@ def main():
 				print('Cannot find chip configurations after read.')
 				sys.exit(-1)
 			print("Chip configs   0x%08X   0x%08X   0x%08X" % (cfg1, cfg2, cfg3) )
+			
+			# To prevent "detection break"
+			_, _, _ = __detect_ch5xx(dev)
 
 	if(args.print_otp is not None):
 		cmd_pl = args.print_otp.to_bytes(1,"little")
@@ -556,6 +641,47 @@ def main():
 				print(":", list(chip_otp[2:]))
 			else:
 				print(" Respond failure:",list(chip_otp) )
+
+	if(args.cfgs_options):
+		ret, chip_cfg = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
+		if(ret is None):
+			print('Cannot read chip configs variables.')
+			sys.exit(-1)
+		if( chip_cfg.get(FLAG_CFG1) is None or
+			chip_cfg.get(FLAG_CFG2) is None or
+			chip_cfg.get(FLAG_CFG3) is None
+			):
+			print('Cannot find chip configurations after read.')
+			sys.exit(-1)
+
+		cfg_changed, new_cfg = __apply_option_list(opt_list,chip_ref,chip_cfg)
+
+		if(verb):
+			cfg1 = chip_cfg.get(FLAG_CFG1)
+			cfg2 = chip_cfg.get(FLAG_CFG2)
+			cfg3 = chip_cfg.get(FLAG_CFG3)
+			
+			ncfg1 = new_cfg.get(FLAG_CFG1)
+			ncfg2 = new_cfg.get(FLAG_CFG2)
+			ncfg3 = new_cfg.get(FLAG_CFG3)
+			print("Chip configs before apply 0x%08X   0x%08X   0x%08X" % (cfg1, cfg2, cfg3) )
+			print("Chip configs after apply  0x%08X   0x%08X   0x%08X" % (ncfg1, ncfg2, ncfg3) )
+
+		if(args.cfgs_options_force_action and cfg_changed):
+			ret, ret_pl = __write_cfg_ch5xx(dev, new_cfg)
+			if(ret is None):
+				print('Cannot write chip configs variables.')
+				sys.exit(-1)
+			elif(ret_pl[0]):
+				print('Error at writing chip configs variables. Resp: ', ret_pl[:])
+				sys.exit(-1)
+			# To repeat original SW
+			_, _ = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
+		elif(not cfg_changed):
+			print('All give configuration options already set, nothing to realy write.')
+		# To prevent "detection break"
+		_, _, _ = __detect_ch5xx(dev)
+
 
 	if(args.read_dataflash !=''):
 		ret, ret_data = __data_flash_read(dev, chip_ref['dataflash_size'])
@@ -712,9 +838,6 @@ def main():
 				sys.exit(' Failed. Address %d' %(addr) )
 		else:
 			print('Nothing to verifying with program flash.')
-
-	# To prevent "detection break"
-	_,_ = __read_cfg_ch5xx(dev, FLAG_CFGs, chip_id, chip_subid)
 
 	print('Finalize communication.',end="")
 	ret, ret_pl = __end_flash_ch5xx(dev, restart_after = args.reset_at_end)
