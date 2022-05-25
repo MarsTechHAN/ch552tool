@@ -1,0 +1,32 @@
+[CH552]
+Tested=1
+CFGs={
+		'_reserved': {
+			FLAG_CFG1 :{'mask':0xffffffff,'value':0xffffffff },
+			FLAG_CFG2 :{'mask':0xfffffff0,'value':0x00000000 },
+			FLAG_CFG3 :{'mask':0xffff0fff,'value':0x000002ff }
+		},
+		'default': {
+			FLAG_CFG2 :{'mask':0x0f,'value':0x03 },
+			FLAG_CFG3 :{'mask':0x0000f000,'value':0x00004000 },
+			'help':'Write default CFGs values'
+		},
+		'cfg2_val': {
+			'need_value': True,
+			FLAG_CFG2 :{'mask':0xf },
+			'help':'Direct define value for CFG2 in mask 0x0000000F'
+		},
+		'cfg3_val': {
+			'need_value': True,
+			FLAG_CFG3 :{'mask':0xf000 },
+			'help':'Direct define value for CFG3 in mask 0x0000F000'
+		},
+		'En_RST_RESET': {
+			FLAG_CFG3 :{'mask': 1<<12 , 'value': 1<<12 },
+			'help':'Enable RST pin as manual reset input pin.'
+		},
+		'Dis_RST_RESET': {
+			FLAG_CFG3 :{'mask': 1<<12, 'value': 0 },
+			'help':'Disable RST pin as manual reset input pin.'
+		}
+	 }
