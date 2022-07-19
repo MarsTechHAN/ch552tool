@@ -46,12 +46,8 @@ python3 -mpip install ch55xtool
   > 2. Click the Options->List all devices, to show all devices
   > 3. Find the device marked with __USB Module__, which presented driver is __CH375_balabala__
   > 4. Replace the driver with libusb-win32.
-  > 5. Install the pyusb package.
-  > 6. If you want to use the WCH Toolchain, open the device manager, find the device marked with __libusb-win32 deives__, right clicked on it, uninstall the driver and delete the driver. You can also check the FAQ of Zadig [HERE](https://github.com/pbatard/libwdi/wiki/Zadig).
-
- ```bash
- python3 -mpip install ch55xtool #Make sure you have the python3 in the PATH, not python2
- ```
+  > 5. Install the pyusb package with ``python -mpip install pyusb``. Since for windows, they dont use python3, but you have to make sure you have the pythono3 in the PATH
+  > 6. If you want to use the WCH Toolchain, open the device manager, find the device marked with __libusb-win32 deives__, right clicked on it, and Uninstall the driver and delete the driver. You can also check the FAQ of Zadig [HERE](https://github.com/pbatard/libwdi/wiki/Zadig).
 
 ## FAQ
 
