@@ -6,8 +6,9 @@ Now available on pypi
 
 An open sourced python command line flash tool for flashing WinChipHead
 CH55x series 8051 USB micro controllers, including CH551, CH552, CH553,
-CH554, and CH559 with bootloader version(BTV) 2.30, 2.31, v2.40. (You
-can check the verision by using the official CH55x Tool.)
+CH554, CH559, CH569 (including CH56x), etc. with bootloader version(BTV)
+above 2.30 (including 2.30, 2.31, 2.40, 2.71), etc.
+(You can check the verision by using the official CH55x Tool.)
 
 Usage
 -----
