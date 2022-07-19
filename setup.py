@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="ch55xtool",
-    version="0.0.2",
+    version="1.0.0",
     author="Han Xiao",
     author_email="hansh-sz@hotmail.com",
     description="An open sourced python tool for flashing WCH CH55x series USB microcontroller",
