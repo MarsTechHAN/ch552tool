@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="ch55xtool",
-    version="1.0.1",
+    version="1.0.2",
     author="Han Xiao",
     author_email="hansh-sz@hotmail.com",
     maintainer="https://github.com/MarsTechHAN/ch552tool/graphs/contributors",
@@ -12,6 +12,8 @@ setuptools.setup(
     long_description_content_type="text/x-rst",
     url="https://github.com/MarsTechHAN/ch552tool",
     packages=setuptools.find_packages(),
+    package_data={'ch55xtool': ['*.wcfg', 'ch55xtool/*.wcfg']},
+    include_package_data=True,
     platforms=["all"],
     classifiers=[
         "Development Status :: 4 - Beta",
