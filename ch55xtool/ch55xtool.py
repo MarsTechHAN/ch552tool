@@ -466,7 +466,7 @@ def __apply_option_list(opt_list, chip_ref, chip_cfgs, verbose=False):
 	return cfgs_changed, result_d
 
 def main():
-	pathname = os.path.dirname(sys.argv[0])
+	pathname = os.path.dirname(__file__) if '__file__' in globals() else os.path.dirname(sys.argv[0])
 	fullpath = os.path.abspath(pathname)
 
 	parser = argparse.ArgumentParser(

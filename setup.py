@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="ch55xtool",
-    version="1.0.2",
+    version="1.0.3",
     author="Han Xiao",
     author_email="hansh-sz@hotmail.com",
     maintainer="https://github.com/MarsTechHAN/ch552tool/graphs/contributors",
