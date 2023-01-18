@@ -385,12 +385,7 @@ def __erase_data_flash_ch5xx(dev, chip_ref):
 
 def __end_flash_ch5xx(dev, restart_after = False):
 	cmd_pl  = bytes([restart_after])
-	if(restart_after):
-		cmd_bin = WCH_CMDS.get("End")
-		cmd_send(dev, cmd_bin, cmd_pl)
-		return True,None
-	else:
-		return cmd_exec(dev, "End", cmd_pl)
+	return cmd_exec(dev, "End", cmd_pl)
 
 def __get_list_from_given_options(options):
 	opt_list = []
