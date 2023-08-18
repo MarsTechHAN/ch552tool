@@ -454,3 +454,14 @@ IsSerialDown=1
 chipid=128
 eepromStartAddr=0
 Introduction = ""
+
+[CH32V203C8T6]
+McuType=7
+MaxFlashSize=65536
+MaxEepromSize=0
+IsNetworkDown=0
+IsUsbDown=1
+IsSerialDown=1
+chipid=49
+eepromStartAddr=0
+Introduction = ""
