@@ -30,3 +30,49 @@ CFGs={
 			'help':'Disable RST pin as manual reset input pin.'
 		}
 	 }
+
+[CH582]
+Tested=1
+CFGs={
+		'_reserved': {
+			FLAG_CFG1 :{'mask':0xffffffff,'value':0xffffffff },
+			FLAG_CFG2 :{'mask':0xffffffff,'value':0xffffffff },
+			FLAG_CFG3 :{'mask':0xffffffff,'value':0xffffffff }
+		},
+		'default': {
+			FLAG_CFG2 :{'mask':0xffffffff,'value':0xffffffff },
+			FLAG_CFG3 :{'mask': 0xffffffff, 'value': 0x4FFF0FD5},
+			'help':'Write default CFGs values'
+		},
+		'Dis_Debug': {
+			FLAG_CFG3 :{'mask': 0xffffffff , 'value': 0x4FFF0F4D },
+			'help':'Enable Debug port '
+		},
+		'En_Debug': {
+			FLAG_CFG3 :{'mask': 0xffffffff, 'value': 0x4FFF0FD5 },
+			'help':'Disable Debug port'
+		}
+	 }
+
+[CH592]
+Tested=1
+CFGs={
+		'_reserved': {
+			FLAG_CFG1 :{'mask':0xffffffff,'value':0xffffffff },
+			FLAG_CFG2 :{'mask':0xffffffff,'value':0xffffffff },
+			FLAG_CFG3 :{'mask':0xffffffff,'value':0xffffffff }
+		},
+		'default': {
+			FLAG_CFG2 :{'mask':0xffffffff,'value':0xffffffff },
+			FLAG_CFG3 :{'mask': 0xffffffff, 'value': 0x4FFF0FD5},
+			'help':'Write default CFGs values'
+		},
+		'Dis_Debug': {
+			FLAG_CFG3 :{'mask': 0xffffffff , 'value': 0x4FFF0F4D },
+			'help':'Enable Debug port '
+		},
+		'En_Debug': {
+			FLAG_CFG3 :{'mask': 0xffffffff, 'value': 0x4FFF0FD5 },
+			'help':'Disable Debug port'
+		}
+	 }
